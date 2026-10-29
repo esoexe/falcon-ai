@@ -14,11 +14,29 @@
 [![Backend: Pure C++20](https://img.shields.io/badge/Engine-Pure_C%2B%2B20_OpenMP-38bdf8.svg)](cpp_engine/)
 [![Zero Python / Zero Containers](https://img.shields.io/badge/Bloat-0_Python_%7C_0_Containers-f59e0b.svg)](ARCHITECTURE.md)
 [![Free AI Providers: 68](https://img.shields.io/badge/Free_AI_Providers-68_Built--In-30d158.svg)](FREE_AI_PROVIDERS_CATALOG.md)
-[![Desktop: Windows x64](https://img.shields.io/badge/Windows_Desktop-Live_3D_Setup.exe-fdfcfc.svg)](desktop/)
+[![Download Windows Setup.exe](https://img.shields.io/badge/Download-Falcon--AI--Setup--2.0.0--x64.exe-30d158.svg)](https://github.com/esoexe/falcon-ai/releases/latest)
 
 **Falcon AI** is a 100% free, MIT-licensed open-source alternative to Meshy.ai — engineered from scratch in **compiled C++20 + OpenMP** with an **OpenCode-inspired** warm monochrome UI, a **6-Agent Autonomous 3D Swarm**, a **60-FPS Playable 3D Game Creator**, **68 built-in free AI providers**, and a **Live-Animated 3D Holographic Windows `Setup.exe`**.
 
 It runs seamlessly on **any machine — even laptops with 0 GB GPU VRAM** — automatically detecting your CPU, RAM, and GPU capabilities at startup.
+
+---
+
+## Live Studio & Playable 3D Game Engine Screenshots
+
+### 6-Agent 3D Swarm & `@kitbash-detailer` (`305,764` Tris · `19` Parts · Watertight)
+![6-Agent Swarm Studio](docs/screenshots/01_mecha_swarm_ultra_kitbash.png)
+
+### Live Prompt-to-3D Synthesis (`285 ms` Zero-GPU Build & Semantic Parts)
+![Live Starfighter Generation](docs/screenshots/02_live_starfighter_parts.png)
+
+### Playable 60-FPS 3D Game Engine (`Citadel Wyvern Siege` + Live World Mutator)
+![Citadel Wyvern Siege 3D Game](docs/screenshots/04_game_citadel_wyvern_siege_combat.png)
+![Live Mutated AI Turrets & Storm Rain](docs/screenshots/05_game_live_mutated_turrets_rain.png)
+
+### Hypercar Racing Game (`Midnight GT: Carbon Overdrive`) & Zero-GPU Router
+![Midnight GT Hypercar Game](docs/screenshots/06_game_midnight_gt_hypercar.png)
+![OpenCode Cream Theme & Hardware Router](docs/screenshots/07_opencode_cream_hardware_router.png)
 
 ---
 
