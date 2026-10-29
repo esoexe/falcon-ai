@@ -2,6 +2,15 @@
 
 All notable changes to **Falcon AI Studio** are documented in this file.
 
+## [4.0.1] - 2026-10-29
+
+### Fixed
+- Prevented prompt typing and other unrelated interface updates from repeatedly resetting the 3D camera.
+- Camera preset changes now preserve the current viewing distance instead of progressively changing the zoom.
+
+### Clarification
+- Earlier 4.0.0 notes overstate the CGTrader-related work. Its parameter fitter used hand-authored category priors and unrelated reference statistics; it was not trained on the listed CGTrader model files. Claims of professional-quality generation or guaranteed watertightness have not been independently verified.
+
 ## [4.0.0] - 2026-10-29
 
 ### Added — Pure C++20 Neural 3D Diffusion Bridge + CGTrader Corpus-Trained Catmull-Clark Master Sculptor

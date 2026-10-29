@@ -81,6 +81,8 @@ export default function App() {
   const [autoRotate, setAutoRotate] = useState(false);
   const [cameraPreset, setCameraPreset] = useState('iso');
   const [cameraNonce, setCameraNonce] = useState(0);
+  // Parent renders (for example, while typing) must not reissue a camera command.
+  const cameraCommand = useMemo(() => ({ type: cameraPreset, nonce: cameraNonce }), [cameraPreset, cameraNonce]);
   const [showSkeleton, setShowSkeleton] = useState(false);
   const [selectedPartIdx, setSelectedPartIdx] = useState(-1);
 
@@ -1462,7 +1464,7 @@ export default function App() {
               rigData={activeAsset?.rig || null}
               showRig={showSkeleton}
               activeAnimation={animMode === 'none' ? 'rest' : animMode}
-              cameraCommand={{ type: cameraPreset, nonce: cameraNonce }}
+              cameraCommand={cameraCommand}
               selectedPartId={selectedPartIdx >= 0 ? parts[selectedPartIdx]?.id || parts[selectedPartIdx]?.name : null}
               theme={theme}
             />

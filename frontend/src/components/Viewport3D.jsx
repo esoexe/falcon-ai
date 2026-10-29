@@ -442,14 +442,16 @@ export default function Viewport3D({
     const target = st.controls.target.clone();
     const dist = st.camera.position.distanceTo(target) || 4.0;
 
-    if (cameraCommand.type === 'front') {
-      st.camera.position.set(target.x, target.y + dist * 0.15, target.z + dist);
-    } else if (cameraCommand.type === 'side') {
-      st.camera.position.set(target.x + dist, target.y + dist * 0.15, target.z);
-    } else if (cameraCommand.type === 'top') {
-      st.camera.position.set(target.x, target.y + dist, target.z + 0.01);
-    } else if (cameraCommand.type === 'iso') {
-      st.camera.position.set(target.x + dist * 0.72, target.y + dist * 0.52, target.z + dist * 0.78);
+    const directions = {
+      front: [0, 0.15, 1],
+      side: [1, 0.15, 0],
+      top: [0, 1, 0.01],
+      iso: [0.72, 0.52, 0.78],
+    };
+    if (directions[cameraCommand.type]) {
+      // A view change should preserve the user's current camera distance.
+      const offset = new THREE.Vector3(...directions[cameraCommand.type]).normalize().multiplyScalar(dist);
+      st.camera.position.copy(target).add(offset);
     } else if (cameraCommand.type === 'screenshot') {
       st.renderer.render(st.scene, st.camera);
       const url = st.renderer.domElement.toDataURL('image/png');
@@ -459,7 +461,7 @@ export default function Viewport3D({
       a.click();
     }
     st.controls.update();
-  }, [cameraCommand]);
+  }, [cameraCommand?.type, cameraCommand?.nonce]);
 
   return <div ref={mountRef} style={{ width: '100%', height: '100%' }} />;
 }

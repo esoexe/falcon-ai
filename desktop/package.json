@@ -1,7 +1,7 @@
 {
   "name": "falcon-ai-desktop",
   "productName": "Falcon AI",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Falcon AI v4.0 — Open-Source C++20 Neural 3D Bridge + CGTrader-Trained Catmull-Clark 3D Studio & Game Engine",
   "author": "Falcon AI Open Source",
   "license": "MIT",
@@ -34,18 +34,26 @@
         {
           "from": "../bin",
           "to": "bin",
-          "filter": ["falcon_server.exe", "falcon_dcc_bridge.exe", "falcon_corpus_trainer.exe"]
+          "filter": [
+            "falcon_server.exe",
+            "falcon_dcc_bridge.exe",
+            "falcon_corpus_trainer.exe"
+          ]
         },
         {
           "from": "../data",
           "to": "data",
-          "filter": ["*.json"]
+          "filter": [
+            "*.json"
+          ]
         }
       ],
       "target": [
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -59,10 +67,14 @@
         {
           "from": "../bin",
           "to": "bin",
-          "filter": ["falcon_server"]
+          "filter": [
+            "falcon_server"
+          ]
         }
       ],
-      "target": ["AppImage"]
+      "target": [
+        "AppImage"
+      ]
     }
   },
   "devDependencies": {
