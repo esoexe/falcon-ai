@@ -27,16 +27,16 @@
       "web_bundle/**/*",
       "starter_assets/**/*"
     ],
-    "extraResources": [
-      {
-        "from": "../bin",
-        "to": "bin",
-        "filter": ["falcon_server*"]
-      }
-    ],
     "win": {
       "icon": "assets/icon.png",
       "signAndEditExecutable": false,
+      "extraResources": [
+        {
+          "from": "../bin",
+          "to": "bin",
+          "filter": ["falcon_server.exe"]
+        }
+      ],
       "target": [
         {
           "target": "portable",
@@ -50,6 +50,13 @@
     "linux": {
       "icon": "assets/icon.png",
       "category": "Graphics",
+      "extraResources": [
+        {
+          "from": "../bin",
+          "to": "bin",
+          "filter": ["falcon_server"]
+        }
+      ],
       "target": ["AppImage"]
     }
   },

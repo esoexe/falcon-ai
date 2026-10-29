@@ -186,18 +186,31 @@ inline std::vector<std::string> apply_ultra_kitbash_details(
                 }
             }
         } else if (cat == "vehicle") {
-            bool is_car = contains_any(title_low, {"hypercar", "car", "coupe"});
-            if (is_car) {
+            bool is_aircraft = contains_any(title_low, {"jet", "fighter", "aircraft", "starship", "interceptor", "spaceship", "shuttle", "bomber", "helicopter"});
+            bool is_bike = contains_any(title_low, {"motorcycle", "superbike", "motorbike", "bike", "chopper"});
+            bool is_suv = contains_any(title_low, {"suv", "pickup", "truck", "4x4", "off-road", "rover"});
+            bool is_hyper = contains_any(title_low, {"hypercar", "supercar", "lmp", "race"});
+            if (is_aircraft) {
+                if (!has_part_id(parts, "underwing_missiles")) {
+                    parts.push_back(mk_part(
+                        "underwing_missiles", "Underwing Tactical AGM Missiles", "capsule",
+                        JsonValue::object({{"radius", 0.048}, {"height", 0.78}}),
+                        {1.05, 0.56, -0.18}, {90, 0, 0}, {1,1,1},
+                        "#f1f5f9", 0.65, 0.28, true, 1, "smooth", "", 0.0, "painted_armor"
+                    ));
+                    added.push_back("underwing tactical missiles");
+                }
+            } else if (!is_bike) {
                 if (!has_part_id(parts, "quad_exhaust_nozzles")) {
                     parts.push_back(mk_part(
-                        "quad_exhaust_nozzles", "Quad Titanium Afterburner Exhausts", "serrated_nozzle",
-                        JsonValue::object({{"radius", 0.075}, {"length", 0.22}, {"petals", 10}}),
-                        {0.18, 0.33, -1.38}, {90, 0, 0}, {1,1,1},
-                        "#cbd5e1", 0.95, 0.18, true, 1, "smooth", "#f97316", 0.55, "forged_metal"
+                        "quad_exhaust_nozzles", "Quad Titanium Exhaust Tailpipes", "serrated_nozzle",
+                        JsonValue::object({{"radius", 0.068}, {"length", 0.20}, {"petals", 10}}),
+                        {0.20, is_suv ? 0.36 : 0.31, -1.38}, {90, 0, 0}, {1,1,1},
+                        "#cbd5e1", 0.95, 0.18, true, 1, "smooth", "", 0.0, "forged_metal"
                     ));
-                    added.push_back("quad titanium exhaust nozzles");
+                    added.push_back("quad titanium exhaust tailpipes");
                 }
-                if (!has_part_id(parts, "roof_aero_scoop")) {
+                if (is_hyper && !has_part_id(parts, "roof_aero_scoop")) {
                     parts.push_back(mk_part(
                         "roof_aero_scoop", "Carbon LMP Roof Intake Snorkel", "sculpted_sdf",
                         JsonValue::object({{"bounds", 0.45}, {"lobes", JsonValue::array({
@@ -209,27 +222,17 @@ inline std::vector<std::string> apply_ultra_kitbash_details(
                     ));
                     added.push_back("carbon LMP roof intake scoop");
                 }
-                if (!has_part_id(parts, "aero_side_mirrors")) {
+                if (!is_suv && !has_part_id(parts, "aero_side_mirrors")) {
                     parts.push_back(mk_part(
-                        "aero_side_mirrors", "Carbon Wing-Stalk Side Mirrors", "wing",
-                        JsonValue::object({{"span", 0.16}, {"chord", 0.09}, {"thickness", 0.025}, {"sweep", 0.25}}),
-                        {0.54, 0.58, 0.34}, {0, 0, 8}, {1,1,1},
+                        "aero_side_mirrors", "Aerodynamic Wing-Stalk Side Mirrors", "wing",
+                        JsonValue::object({{"span", 0.15}, {"chord", 0.085}, {"thickness", 0.024}, {"sweep", 0.22}}),
+                        {0.55, 0.57, 0.34}, {0, 0, 8}, {1,1,1},
                         "#18181b", 0.30, 0.26, true, 1, "smooth", "", 0.0, "carbon_fiber"
                     ));
                     added.push_back("aerodynamic wing mirrors");
                 }
-            } else {
-                if (!has_part_id(parts, "underwing_missiles")) {
-                    parts.push_back(mk_part(
-                        "underwing_missiles", "Underwing Tactical AGM Missiles", "capsule",
-                        JsonValue::object({{"radius", 0.048}, {"height", 0.78}}),
-                        {1.05, 0.56, -0.18}, {90, 0, 0}, {1,1,1},
-                        "#f1f5f9", 0.65, 0.28, true, 1, "smooth", "", 0.0, "painted_armor"
-                    ));
-                    added.push_back("underwing tactical missiles");
-                }
             }
-        } else if (cat == "architecture") {
+        } else if (cat == "architecture" && contains_any(title_low, {"citadel", "castle", "fortress", "keep", "cathedral", "tower"})) {
             if (!has_part_id(parts, "forecourt_gate_arch")) {
                 parts.push_back(mk_part(
                     "forecourt_gate_arch", "Carved Gothic Forecourt Gate Arch", "ruined_arch",
@@ -248,7 +251,7 @@ inline std::vector<std::string> apply_ultra_kitbash_details(
                 ));
                 added.push_back("ley-line crystal outcrops");
             }
-        } else {
+        } else if (contains_any(title_low, {"astrolabe", "relic", "shrine", "altar", "idol"})) {
             if (!has_part_id(parts, "ancient_shrine_arch")) {
                 parts.push_back(mk_part(
                     "ancient_shrine_arch", "Sculpted Classical Portal Arch", "ruined_arch",

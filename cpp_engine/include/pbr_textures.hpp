@@ -9,11 +9,12 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <map>
 #include <mutex>
-#include <png.h>
 #include <string>
 #include <vector>
+#include <zlib.h>
 
 namespace openmesh {
 
@@ -100,44 +101,71 @@ inline std::pair<float, float> tile_worley(float u, float v, int cells, uint32_t
     return {f1, f2 - f1};
 }
 
+inline void append_be32_png(std::vector<uint8_t>& out, uint32_t v) {
+    out.push_back(static_cast<uint8_t>((v >> 24) & 0xFFu));
+    out.push_back(static_cast<uint8_t>((v >> 16) & 0xFFu));
+    out.push_back(static_cast<uint8_t>((v >> 8) & 0xFFu));
+    out.push_back(static_cast<uint8_t>(v & 0xFFu));
+}
+
+inline void append_png_chunk(std::vector<uint8_t>& out, const char type[4], const uint8_t* data, size_t len) {
+    append_be32_png(out, static_cast<uint32_t>(len));
+    const uint8_t* tbytes = reinterpret_cast<const uint8_t*>(type);
+    out.insert(out.end(), tbytes, tbytes + 4);
+    if (len > 0 && data != nullptr) {
+        out.insert(out.end(), data, data + len);
+    }
+    uLong crc = ::crc32(0L, Z_NULL, 0);
+    crc = ::crc32(crc, tbytes, 4);
+    if (len > 0 && data != nullptr) {
+        crc = ::crc32(crc, data, static_cast<uInt>(len));
+    }
+    append_be32_png(out, static_cast<uint32_t>(crc));
+}
+
 inline std::vector<uint8_t> encode_rgb_png_mem(const std::vector<uint8_t>& rgb, int w, int h) {
     std::vector<uint8_t> out;
+    if (w <= 0 || h <= 0 || rgb.size() < static_cast<size_t>(w * h * 3)) return out;
     out.reserve(static_cast<size_t>(w * h));
 
-    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-    if (!png) return out;
-    png_infop info = png_create_info_struct(png);
-    if (!info) {
-        png_destroy_write_struct(&png, nullptr);
-        return out;
+    static constexpr uint8_t kSig[8] = {137, 80, 78, 71, 13, 10, 26, 10};
+    out.insert(out.end(), kSig, kSig + 8);
+
+    uint8_t ihdr[13] = {
+        static_cast<uint8_t>((w >> 24) & 0xFF), static_cast<uint8_t>((w >> 16) & 0xFF),
+        static_cast<uint8_t>((w >> 8) & 0xFF),  static_cast<uint8_t>(w & 0xFF),
+        static_cast<uint8_t>((h >> 24) & 0xFF), static_cast<uint8_t>((h >> 16) & 0xFF),
+        static_cast<uint8_t>((h >> 8) & 0xFF),  static_cast<uint8_t>(h & 0xFF),
+        8, // 8 bits per channel
+        2, // Truecolor RGB
+        0, // deflate compression
+        0, // adaptive filtering
+        0  // no interlace
+    };
+    append_png_chunk(out, "IHDR", ihdr, sizeof(ihdr));
+
+    // Filter 1 (Sub) gives crisp compression on smooth PBR gradients & normal maps
+    const size_t row_bytes = static_cast<size_t>(w) * 3;
+    std::vector<uint8_t> raw(static_cast<size_t>(h) * (1 + row_bytes));
+    for (int y = 0; y < h; ++y) {
+        const uint8_t* src = &rgb[static_cast<size_t>(y) * row_bytes];
+        uint8_t* dst = &raw[static_cast<size_t>(y) * (1 + row_bytes)];
+        dst[0] = 1; // Sub filter
+        dst[1] = src[0];
+        dst[2] = src[1];
+        dst[3] = src[2];
+        for (size_t i = 3; i < row_bytes; ++i) {
+            dst[1 + i] = static_cast<uint8_t>(src[i] - src[i - 3]);
+        }
     }
-    if (setjmp(png_jmpbuf(png))) {
-        png_destroy_write_struct(&png, &info);
+
+    uLongf zlen = ::compressBound(static_cast<uLong>(raw.size()));
+    std::vector<uint8_t> zbuf(static_cast<size_t>(zlen));
+    if (::compress2(zbuf.data(), &zlen, raw.data(), static_cast<uLong>(raw.size()), 3) != Z_OK) {
         return {};
     }
-
-    png_set_write_fn(
-        png,
-        &out,
-        [](png_structp png_ptr, png_bytep data, png_size_t length) {
-            auto* vec = static_cast<std::vector<uint8_t>*>(png_get_io_ptr(png_ptr));
-            vec->insert(vec->end(), data, data + length);
-        },
-        [](png_structp) {}
-    );
-
-    png_set_compression_level(png, 3);
-    png_set_IHDR(png, info, w, h, 8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
-                 PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_BASE);
-    png_write_info(png, info);
-
-    std::vector<png_bytep> rows(static_cast<size_t>(h));
-    for (int y = 0; y < h; ++y) {
-        rows[static_cast<size_t>(y)] = const_cast<png_bytep>(&rgb[static_cast<size_t>(y * w * 3)]);
-    }
-    png_write_image(png, rows.data());
-    png_write_end(png, nullptr);
-    png_destroy_write_struct(&png, &info);
+    append_png_chunk(out, "IDAT", zbuf.data(), static_cast<size_t>(zlen));
+    append_png_chunk(out, "IEND", nullptr, 0);
     return out;
 }
 

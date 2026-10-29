@@ -51,9 +51,31 @@ inline std::string to_lower_str(std::string s) {
     return s;
 }
 
+inline bool has_word_or_phrase(const std::string& hay, const char* w) {
+    if (!w || !*w) return false;
+    const size_t wlen = std::char_traits<char>::length(w);
+    size_t pos = 0;
+    while ((pos = hay.find(w, pos)) != std::string::npos) {
+        bool left_ok = (pos == 0) || !std::isalnum(static_cast<unsigned char>(hay[pos - 1]));
+        size_t end = pos + wlen;
+        bool right_ok = false;
+        if (end == hay.size() || !std::isalnum(static_cast<unsigned char>(hay[end]))) {
+            right_ok = true;
+        } else if (hay[end] == 's' && (end + 1 == hay.size() || !std::isalnum(static_cast<unsigned char>(hay[end + 1])))) {
+            right_ok = true; // plural -s (e.g. "cars", "swords")
+        } else if (end + 1 < hay.size() && hay[end] == 'e' && hay[end + 1] == 's' &&
+                   (end + 2 == hay.size() || !std::isalnum(static_cast<unsigned char>(hay[end + 2])))) {
+            right_ok = true; // plural -es (e.g. "axes", "boxes")
+        }
+        if (left_ok && right_ok) return true;
+        pos += 1;
+    }
+    return false;
+}
+
 inline bool contains_any(const std::string& hay, const std::vector<const char*>& words) {
     for (const char* w : words) {
-        if (hay.find(w) != std::string::npos) return true;
+        if (has_word_or_phrase(hay, w)) return true;
     }
     return false;
 }
@@ -85,12 +107,14 @@ inline void extract_palette_cpp(
         {"jade", "#059669", 0.14, 0.20}, {"emerald", "#047857", 0.22, 0.16},
         {"ruby", "#be123c", 0.28, 0.14}, {"crimson", "#991b1b", 0.38, 0.34},
         {"red", "#dc2626", 0.44, 0.30}, {"cobalt", "#1d4ed8", 0.74, 0.26},
-        {"blue", "#2563eb", 0.68, 0.28}, {"purple", "#6d28d9", 0.40, 0.28}
+        {"blue", "#2563eb", 0.68, 0.28}, {"yellow", "#eab308", 0.62, 0.24},
+        {"orange", "#ea580c", 0.58, 0.26}, {"green", "#16a34a", 0.52, 0.28},
+        {"purple", "#6d28d9", 0.40, 0.28}
     };
 
     std::vector<MatSpec> hits;
     for (const auto& km : kMats) {
-        if (low.find(km.kw) != std::string::npos) {
+        if (has_word_or_phrase(low, km.kw)) {
             hits.push_back({km.hex, km.m, km.r});
         }
     }
@@ -106,7 +130,7 @@ inline void extract_palette_cpp(
         {"gold", "#fbbf24"}, {"amber", "#f59e0b"}, {"ice", "#7dd3fc"}
     };
     for (const auto& kg : kGlows) {
-        if (low.find(kg.kw) != std::string::npos) {
+        if (has_word_or_phrase(low, kg.kw)) {
             glow = kg.hex;
             break;
         }
@@ -186,7 +210,8 @@ inline JsonValue mk_cap(
     return l;
 }
 
-inline JsonValue compile_prompt_cpp_symbolic(const std::string& prompt) {
+inline JsonValue compile_prompt_cpp_symbolic(const std::string& prompt, bool* out_matched = nullptr) {
+    if (out_matched) *out_matched = true;
     std::string low = to_lower_str(prompt);
     JsonValue bp = JsonValue::object();
     JsonValue parts = JsonValue::array();
@@ -503,72 +528,247 @@ inline JsonValue compile_prompt_cpp_symbolic(const std::string& prompt) {
         bp["title"] = "Stealth Vector-Thrust Starfighter";
         bp["category"] = "vehicle";
 
-    } else if (contains_any(low, {"car", "coupe", "hypercar", "supercar", "truck", "rover", "vehicle"})) {
-        MatSpec prim{"#be123c", 0.82, 0.16}, acc{"#18181b", 0.26, 0.30};
+    } else if (contains_any(low, {"helicopter", "apache", "gunship", "quadcopter", "drone"})) {
+        MatSpec prim{"#334155", 0.72, 0.28}, acc{"#18181b", 0.35, 0.32};
         std::string glow = "#38bdf8";
         extract_palette_cpp(prompt, prim, acc, glow);
 
-        // 1. Sculpted LMP/GT Widebody Monocoque with Boolean Wheel Wells & Side Intakes!
-        parts.push_back(mk_part("hypercar_monocoque", "Sculpted Widebody Monocoque", "sculpted_sdf",
+        parts.push_back(mk_part("heli_fuselage", "Sculpted Aerodynamic Fuselage & Tail Boom", "sculpted_sdf",
             JsonValue::object({{"bounds", 1.65}, {"lobes", JsonValue::array({
-                // Low wide chassis core + sculpted front/rear fenders
-                mk_lobe({0, -0.06, 0.02}, {0.66, 0.17, 1.34}, 0.10, "round_box"),
-                mk_lobe({ 0.56, -0.02,  0.76}, {0.22, 0.19, 0.42}, 0.12),
-                mk_lobe({-0.56, -0.02,  0.76}, {0.22, 0.19, 0.42}, 0.12),
-                mk_lobe({ 0.58,  0.02, -0.78}, {0.24, 0.22, 0.48}, 0.14),
-                mk_lobe({-0.58,  0.02, -0.78}, {0.24, 0.22, 0.48}, 0.14),
-                // Tapered aerodynamic nose & engine decklid spine
-                mk_cap({0, -0.09, 0.75}, {0, -0.13, 1.36}, 0.48, 0.34, 0.12),
-                mk_cap({0,  0.14, -0.25}, {0, 0.04, -1.24}, 0.38, 0.26, 0.12),
+                mk_cap({0, 0.04, 0.65}, {0, 0.0, -0.25}, 0.38, 0.34, 0.12),
+                mk_cap({0, 0.06, -0.20}, {0, 0.14, -1.42}, 0.22, 0.075, 0.08),
+                mk_cap({0, 0.14, -1.32}, {0, 0.48, -1.48}, 0.085, 0.045, 0.05)
+            })}}),
+            {0, 0.86, 0.12}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "scifi_panels", "", 0.0, "painted_armor"));
+
+        parts.push_back(mk_part("heli_cockpit_glass", "Smoked Bubble Cockpit Canopy", "sculpted_sdf",
+            JsonValue::object({{"bounds", 0.85}, {"lobes", JsonValue::array({
+                mk_cap({0, 0.04, 0.05}, {0, -0.06, 0.42}, 0.32, 0.20, 0.10)
+            })}}),
+            {0, 0.92, 0.56}, {0,0,0}, {1.02, 0.82, 1.0}, "#090d16", 0.95, 0.05, false, 1, "smooth", "", 0.0, "forged_metal"));
+
+        parts.push_back(mk_part("main_rotor_hub", "Turboshaft Mast & 4-Blade Main Rotor", "wing",
+            JsonValue::object({{"span", 1.55}, {"chord", 0.14}, {"thickness", 0.024}, {"sweep", 0.02}}),
+            {0.08, 1.38, 0.08}, {0,0,0}, {1,1,1}, acc.hex, 0.42, 0.30, false, 4, "smooth", "", 0.0, "carbon_fiber"));
+
+        parts.push_back(mk_part("landing_skids", "Tubular Landing Skids & Struts", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.15}, {"lobes", JsonValue::array({
+                mk_cap({0, -0.28, -0.58}, {0, -0.28, 0.68}, 0.032, 0.032, 0.02),
+                mk_cap({0, -0.28,  0.34}, {-0.14, 0.08,  0.34}, 0.028, 0.028, 0.02),
+                mk_cap({0, -0.28, -0.32}, {-0.14, 0.08, -0.32}, 0.028, 0.028, 0.02)
+            })}}),
+            {0.42, 0.52, 0.16}, {0,0,0}, {1,1,1}, "#475569", 0.86, 0.28, true, 1, "smooth", "", 0.0, "forged_metal"));
+
+        parts.push_back(mk_part("tail_rotor", "Fenestron Tail Rotor Assembly", "wheel_assembly",
+            JsonValue::object({{"radius", 0.18}, {"width", 0.06}, {"spokes", 6}}),
+            {0.08, 1.18, -1.32}, {0,0,0}, {1,1,1}, acc.hex, 0.55, 0.35, false, 1, "smooth", "", 0.0, "carbon_fiber"));
+
+        bp["title"] = "Sculpted Twin-Turbine Gunship Helicopter";
+        bp["category"] = "vehicle";
+
+    } else if (contains_any(low, {"boat", "ship", "yacht", "submarine", "sailboat", "cruiser"})) {
+        bool is_sub = contains_any(low, {"submarine", "sub"});
+        MatSpec prim{is_sub ? "#1e293b" : "#f8fafc", is_sub ? 0.72 : 0.22, is_sub ? 0.36 : 0.18}, acc{"#0f172a", 0.40, 0.30};
+        std::string glow = "#38bdf8";
+        extract_palette_cpp(prompt, prim, acc, glow);
+
+        parts.push_back(mk_part("vessel_hull", is_sub ? "Hydrodynamic Pressure Hull" : "Sculpted Deep-V Marine Hull", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.70}, {"lobes", JsonValue::array({
+                mk_cap({0, 0.0, 1.15}, {0, 0.02, -1.18}, is_sub ? 0.32 : 0.44, is_sub ? 0.22 : 0.38, 0.14),
+                mk_cap({0, 0.06, 1.05}, {0, 0.12, 1.48}, 0.28, 0.06, 0.10)
+            })}}),
+            {0, 0.48, 0}, {0,0,0}, {1.0, is_sub ? 1.0 : 0.62, 1.0}, prim.hex, prim.met, prim.rgh, false, 1, "smooth", "", 0.0, "painted_armor"));
+
+        parts.push_back(mk_part("vessel_bridge", is_sub ? "Conning Sail Tower & Dive Planes" : "Panoramic Flybridge Cabin", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.05}, {"lobes", JsonValue::array({
+                mk_lobe({0, 0, 0}, {is_sub ? 0.12 : 0.34, is_sub ? 0.28 : 0.18, 0.42}, 0.06, "round_box")
+            })}}),
+            {0, 0.84, 0.12}, {0,0,0}, {1,1,1}, acc.hex, 0.86, 0.12, false, 1, "smooth", "", 0.0, "forged_metal"));
+
+        bp["title"] = is_sub ? "Sculpted Stealth Attack Submarine" : "Sculpted Luxury Motor Yacht";
+        bp["category"] = "vehicle";
+
+    } else if (contains_any(low, {"suv", "truck", "pickup", "jeep", "offroad", "off-road", "4x4", "rover", "van", "humvee"})) {
+        MatSpec prim{"#334155", 0.72, 0.24}, acc{"#18181b", 0.28, 0.42};
+        std::string glow = "#fef08a";
+        extract_palette_cpp(prompt, prim, acc, glow);
+        bool is_pickup = contains_any(low, {"truck", "pickup"});
+
+        // 1. High-Clearance 4x4 Sculpted Body & Flared Wheel Arches
+        parts.push_back(mk_part("suv_body_shell", is_pickup ? "Sculpted 4x4 Crew-Cab & Cargo Bed" : "Sculpted 4x4 Armored SUV Body", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.70}, {"lobes", JsonValue::array({
+                mk_lobe({0, -0.02, 0.04}, {0.68, 0.28, 1.36}, 0.08, "round_box"),
+                mk_lobe({0,  0.30, is_pickup ? 0.22 : -0.14}, {0.60, 0.26, is_pickup ? 0.62 : 0.94}, 0.08, "round_box"),
+                // Carve open pickup bed if truck!
+                is_pickup ? mk_lobe({0, 0.22, -0.84}, {0.54, 0.20, 0.50}, 0.03, "round_box", "subtract")
+                          : mk_lobe({0, 0.48, -0.14}, {0.52, 0.04, 0.76}, 0.03, "round_box"),
+                // Carve 4 tall off-road wheel wells
+                mk_lobe({ 0.70, -0.22,  0.84}, {0.28, 0.38, 0.40}, 0.03, "ellipsoid", "subtract"),
+                mk_lobe({-0.70, -0.22,  0.84}, {0.28, 0.38, 0.40}, 0.03, "ellipsoid", "subtract"),
+                mk_lobe({ 0.70, -0.22, -0.84}, {0.28, 0.38, 0.40}, 0.03, "ellipsoid", "subtract"),
+                mk_lobe({-0.70, -0.22, -0.84}, {0.28, 0.38, 0.40}, 0.03, "ellipsoid", "subtract")
+            })}}),
+            {0, 0.62, 0}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "smooth", "", 0.0, "painted_armor"));
+
+        // 2. Smoked Cabin Glass Greenhouse
+        parts.push_back(mk_part("suv_cabin_glass", "Tinted Panoramic Cabin Glass", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.25}, {"lobes", JsonValue::array({
+                mk_lobe({0, 0, 0}, {0.615, 0.17, is_pickup ? 0.56 : 0.86}, 0.05, "round_box")
+            })}}),
+            {0, 0.92, is_pickup ? 0.22 : -0.12}, {0,0,0}, {1,1,1}, "#090d16", 0.94, 0.06, false, 1, "smooth", "", 0.0, "forged_metal"));
+
+        // 3. Heavy Tubular Steel Front Bullbar & Skidplate
+        parts.push_back(mk_part("front_bullbar", "Tubular Steel Bullbar & Winch Bumper", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.05}, {"lobes", JsonValue::array({
+                mk_lobe({0, -0.06, 0}, {0.66, 0.11, 0.12}, 0.04, "round_box"),
+                mk_cap({-0.46, -0.04, 0.04}, {-0.38, 0.20, 0.02}, 0.042, 0.038, 0.03),
+                mk_cap({ 0.46, -0.04, 0.04}, { 0.38, 0.20, 0.02}, 0.042, 0.038, 0.03),
+                mk_cap({-0.38,  0.20, 0.02}, { 0.38, 0.20, 0.02}, 0.038, 0.038, 0.03)
+            })}}),
+            {0, 0.52, 1.42}, {0,0,0}, {1,1,1}, acc.hex, 0.78, 0.36, false, 1, "smooth", "", 0.0, "forged_metal"));
+
+        // 4. 4 Oversized Mud-Terrain 4x4 Wheels & Brakes
+        parts.push_back(mk_part("front_offroad_wheels", "Front Mud-Terrain 4x4 Wheels", "wheel_assembly",
+            JsonValue::object({{"radius", 0.35}, {"width", 0.28}, {"spokes", 8}}),
+            {0.68, 0.35, 0.84}, {0,0,0}, {1,1,1}, "#18181b", 0.25, 0.78, true, 1, "smooth", "", 0.0, "rubber_tire"));
+
+        parts.push_back(mk_part("rear_offroad_wheels", "Rear Mud-Terrain 4x4 Wheels", "wheel_assembly",
+            JsonValue::object({{"radius", 0.35}, {"width", 0.28}, {"spokes", 8}}),
+            {0.68, 0.35, -0.84}, {0,0,0}, {1,1,1}, "#18181b", 0.25, 0.78, true, 1, "smooth", "", 0.0, "rubber_tire"));
+
+        // 5. Roof Expedition LED Lightbar + Headlights + Taillights
+        parts.push_back(mk_part("roof_led_bar", "Expedition Roof LED Lightbar", "capsule",
+            JsonValue::object({{"radius", 0.032}, {"height", 0.96}}),
+            {0, 1.18, 0.62}, {0, 0, 90}, {1,1,1}, glow, 0.12, 0.08, false, 1, "smooth", glow, 0.95));
+
+        parts.push_back(mk_part("suv_headlights", "Dual LED Projector Headlights", "capsule",
+            JsonValue::object({{"radius", 0.048}, {"height", 0.14}}),
+            {0.48, 0.64, 1.38}, {0, 0, 90}, {1,1,1}, "#f8fafc", 0.1, 0.08, true, 1, "smooth", "#e0f2fe", 0.92));
+
+        parts.push_back(mk_part("suv_taillights", "Vertical Rear LED Taillights", "capsule",
+            JsonValue::object({{"radius", 0.038}, {"height", 0.22}}),
+            {0.58, 0.68, -1.36}, {0,0,0}, {1,1,1}, "#ef4444", 0.1, 0.10, true, 1, "smooth", "#ef4444", 0.94));
+
+        bp["title"] = is_pickup ? "Sculpted 4x4 Off-Road Pickup Truck" : "Sculpted 4x4 Armored Off-Road SUV";
+        bp["category"] = "vehicle";
+
+    } else if (contains_any(low, {"motorcycle", "motorbike", "bike", "superbike", "chopper", "ducati", "kawasaki"})) {
+        MatSpec prim{"#dc2626", 0.84, 0.16}, acc{"#18181b", 0.35, 0.32};
+        std::string glow = "#38bdf8";
+        extract_palette_cpp(prompt, prim, acc, glow);
+
+        parts.push_back(mk_part("front_bike_wheel", "Front Alloy Superbike Wheel & Rotor", "wheel_assembly",
+            JsonValue::object({{"radius", 0.31}, {"width", 0.14}, {"spokes", 10}}),
+            {0, 0.31, 0.74}, {0,0,0}, {1,1,1}, "#18181b", 0.28, 0.72, false, 1, "smooth", "", 0.0, "rubber_tire"));
+
+        parts.push_back(mk_part("rear_bike_wheel", "Rear Wide Superbike Tire & Sprocket", "wheel_assembly",
+            JsonValue::object({{"radius", 0.32}, {"width", 0.20}, {"spokes", 10}}),
+            {0, 0.32, -0.70}, {0,0,0}, {1,1,1}, "#18181b", 0.28, 0.72, false, 1, "smooth", "", 0.0, "rubber_tire"));
+
+        parts.push_back(mk_part("bike_tank_fairing", "Sculpted Fuel Tank & Aero Nose Fairing", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.25}, {"lobes", JsonValue::array({
+                mk_cap({0, 0.10, 0.18}, {0, 0.02, -0.18}, 0.20, 0.15, 0.08),
+                mk_cap({0, 0.04, 0.42}, {0, -0.06, 0.68}, 0.18, 0.10, 0.08),
+                mk_cap({0, -0.04, -0.22}, {0, 0.12, -0.78}, 0.13, 0.06, 0.07),
+                mk_lobe({0, -0.18, 0.06}, {0.16, 0.19, 0.28}, 0.05, "round_box")
+            })}}),
+            {0, 0.68, 0.02}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "smooth", "", 0.0, "painted_armor"));
+
+        parts.push_back(mk_part("inverted_forks", "Gold Anodized Inverted Front Forks", "hydraulic_piston",
+            JsonValue::object({{"length", 0.68}, {"radius", 0.032}}),
+            {0.10, 0.56, 0.60}, {-24, 0, 0}, {1,1,1}, "#eab308", 0.92, 0.18, true, 1, "smooth", "", 0.0, "forged_metal"));
+
+        parts.push_back(mk_part("rider_saddle", "Contoured Alcantara Rider Saddle", "sculpted_sdf",
+            JsonValue::object({{"bounds", 0.55}, {"lobes", JsonValue::array({
+                mk_cap({0, 0, 0.14}, {0, 0.04, -0.22}, 0.13, 0.11, 0.05)
+            })}}),
+            {0, 0.72, -0.24}, {0,0,0}, {1.0, 0.55, 1.0}, "#18181b", 0.08, 0.82, false, 1, "smooth", "", 0.0, "wrapped_leather"));
+
+        parts.push_back(mk_part("bike_exhaust", "Upswept Titanium Akrapovic Exhaust", "serrated_nozzle",
+            JsonValue::object({{"radius", 0.062}, {"length", 0.44}, {"petals", 8}}),
+            {0.16, 0.48, -0.52}, {68, 8, 0}, {1,1,1}, "#cbd5e1", 0.94, 0.18, false, 1, "smooth", "", 0.0, "forged_metal"));
+
+        parts.push_back(mk_part("bike_headlight", "Aggressive Dual-LED Nose Headlight", "capsule",
+            JsonValue::object({{"radius", 0.035}, {"height", 0.18}}),
+            {0, 0.66, 0.72}, {0, 0, 90}, {1,1,1}, glow, 0.1, 0.08, false, 1, "smooth", glow, 0.95));
+
+        bp["title"] = "Sculpted Streetfighter Superbike";
+        bp["category"] = "vehicle";
+
+    } else if (contains_any(low, {"car", "automobile", "sedan", "coupe", "roadster", "convertible", "gt", "hypercar", "supercar", "racecar", "lamborghini", "ferrari", "porsche", "mustang", "bmw", "mercedes", "audi", "tesla", "bugatti", "mclaren", "vehicle"})) {
+        MatSpec prim{"#be123c", 0.84, 0.14}, acc{"#18181b", 0.26, 0.28};
+        std::string glow = "#e0f2fe";
+        extract_palette_cpp(prompt, prim, acc, glow);
+        bool is_hyper = contains_any(low, {"hypercar", "supercar", "lamborghini", "ferrari", "bugatti", "mclaren", "racecar", "spoiler", "wing"});
+
+        // 1. Sculpted Aerodynamic Widebody Monocoque with Boolean Wheel Wells, Grille & Side Intakes!
+        parts.push_back(mk_part("car_monocoque", "Sculpted Aerodynamic Widebody Chassis", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.65}, {"lobes", JsonValue::array({
+                // Low wide chassis core + sculpted muscular front/rear fenders
+                mk_lobe({0, -0.05, 0.02}, {0.65, 0.18, 1.34}, 0.10, "round_box"),
+                mk_lobe({ 0.55, -0.02,  0.76}, {0.22, 0.19, 0.42}, 0.12),
+                mk_lobe({-0.55, -0.02,  0.76}, {0.22, 0.19, 0.42}, 0.12),
+                mk_lobe({ 0.57,  0.02, -0.78}, {0.24, 0.22, 0.48}, 0.14),
+                mk_lobe({-0.57,  0.02, -0.78}, {0.24, 0.22, 0.48}, 0.14),
+                // Tapered aerodynamic hood & fastback rear decklid with ducktail lip
+                mk_cap({0, -0.08, 0.72}, {0, -0.12, 1.36}, 0.49, 0.35, 0.12),
+                mk_cap({0,  0.15, -0.22}, {0, 0.06, -1.26}, 0.40, 0.28, 0.12),
                 // Boolean carve 4 crisp wheel arches!
                 mk_lobe({ 0.68, -0.13,  0.82}, {0.24, 0.32, 0.34}, 0.03, "ellipsoid", "subtract"),
                 mk_lobe({-0.68, -0.13,  0.82}, {0.24, 0.32, 0.34}, 0.03, "ellipsoid", "subtract"),
                 mk_lobe({ 0.69, -0.11, -0.82}, {0.25, 0.34, 0.36}, 0.03, "ellipsoid", "subtract"),
                 mk_lobe({-0.69, -0.11, -0.82}, {0.25, 0.34, 0.36}, 0.03, "ellipsoid", "subtract"),
-                // Boolean carve side radiator intakes & front hood aero duct!
-                mk_lobe({ 0.66, -0.02, -0.18}, {0.14, 0.10, 0.28}, 0.025, "round_box", "subtract"),
-                mk_lobe({-0.66, -0.02, -0.18}, {0.14, 0.10, 0.28}, 0.025, "round_box", "subtract"),
-                mk_lobe({0.0, 0.09, 0.96}, {0.26, 0.06, 0.18}, 0.025, "round_box", "subtract")
+                // Boolean carve front air dam grille + side intakes!
+                mk_lobe({0.0, -0.11, 1.38}, {0.38, 0.08, 0.10}, 0.02, "round_box", "subtract"),
+                mk_lobe({ 0.65, -0.02, -0.18}, {0.13, 0.09, 0.26}, 0.025, "round_box", "subtract"),
+                mk_lobe({-0.65, -0.02, -0.18}, {0.13, 0.09, 0.26}, 0.025, "round_box", "subtract")
             })}}),
             {0, 0.43, 0}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "smooth", "", 0.0, "painted_armor"));
 
-        // 2. Sculpted Teardrop Tinted Glass Canopy (Zero boxy glass!)
-        parts.push_back(mk_part("teardrop_canopy", "Teardrop Tinted Glass Greenhouse", "sculpted_sdf",
-            JsonValue::object({{"bounds", 1.10}, {"lobes", JsonValue::array({
-                mk_cap({0, -0.04, 0.42}, {0, 0.08, -0.02}, 0.34, 0.44, 0.12),
-                mk_cap({0, 0.08, -0.02}, {0, -0.02, -0.58}, 0.44, 0.26, 0.12)
+        // 2. Sculpted Teardrop Smoked Glass Cabin Greenhouse
+        parts.push_back(mk_part("teardrop_canopy", "Smoked Panoramic Glass Cabin", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.12}, {"lobes", JsonValue::array({
+                mk_cap({0, -0.03, 0.44}, {0, 0.09, -0.02}, 0.36, 0.45, 0.12),
+                mk_cap({0, 0.09, -0.02}, {0, -0.01, -0.60}, 0.45, 0.28, 0.12)
             })}}),
-            {0, 0.56, -0.04}, {0,0,0}, {1.06, 0.52, 1.0}, "#090d16", 0.94, 0.05, false, 1, "smooth", "", 0.0, "forged_metal"));
+            {0, 0.57, -0.03}, {0,0,0}, {1.06, 0.54, 1.0}, "#090d16", 0.95, 0.05, false, 1, "smooth", "", 0.0, "forged_metal"));
 
-        // 3. Carbon-Fiber Front Splitter, Side Skirts & Rear Venturi Diffuser
-        parts.push_back(mk_part("carbon_aero_floor", "Carbon Splitter, Skirts & Rear Diffuser", "sculpted_sdf",
+        // 3. Carbon-Fiber Front Splitter, Side Skirts, Grille Mesh & Rear Venturi Diffuser
+        parts.push_back(mk_part("carbon_aero_floor", "Carbon Front Splitter, Skirts & Rear Diffuser", "sculpted_sdf",
             JsonValue::object({{"bounds", 1.65}, {"lobes", JsonValue::array({
-                mk_lobe({0, -0.14, 0.04}, {0.69, 0.035, 1.40}, 0.02, "round_box"),
+                mk_lobe({0, -0.14, 0.04}, {0.68, 0.035, 1.40}, 0.02, "round_box"),
+                mk_lobe({0, -0.06, 1.34}, {0.36, 0.065, 0.04}, 0.015, "round_box"),
                 mk_lobe({0.22, -0.10, -1.36}, {0.025, 0.08, 0.14}, 0.01, "round_box"),
                 mk_lobe({-0.22, -0.10, -1.36}, {0.025, 0.08, 0.14}, 0.01, "round_box")
             })}}),
             {0, 0.30, 0}, {0,0,0}, {1,1,1}, acc.hex, acc.met, acc.rgh, false, 1, "smooth", "", 0.0, "carbon_fiber"));
 
-        // 4. 4 Real 10-Spoke Concave Alloy Wheels + Brakes + Wide Performance Tires!
+        // 4. 4 Real 10-Spoke Concave Alloy Wheels + Ventilated Brake Rotors + Wide Performance Tires!
         parts.push_back(mk_part("front_wheels", "Front 10-Spoke Alloy Wheels & Brakes", "wheel_assembly",
             JsonValue::object({{"radius", 0.285}, {"width", 0.23}, {"spokes", 10}}),
             {0.64, 0.285, 0.82}, {0,0,0}, {1,1,1}, "#18181b", 0.28, 0.72, true, 1, "smooth", "", 0.0, "rubber_tire"));
 
         parts.push_back(mk_part("rear_wheels", "Rear Deep-Dish Alloy Wheels & Brakes", "wheel_assembly",
-            JsonValue::object({{"radius", 0.31}, {"width", 0.27}, {"spokes", 10}}),
-            {0.65, 0.31, -0.82}, {0,0,0}, {1,1,1}, "#18181b", 0.28, 0.72, true, 1, "smooth", "", 0.0, "rubber_tire"));
+            JsonValue::object({{"radius", 0.305}, {"width", 0.26}, {"spokes", 10}}),
+            {0.65, 0.305, -0.82}, {0,0,0}, {1,1,1}, "#18181b", 0.28, 0.72, true, 1, "smooth", "", 0.0, "rubber_tire"));
 
-        // 5. Carbon Swan-Neck Rear GT Wing
-        parts.push_back(mk_part("gt_airfoil_wing", "Carbon-Fiber Swan-Neck GT Wing", "wing",
-            JsonValue::object({{"span", 0.68}, {"chord", 0.24}, {"thickness", 0.04}, {"sweep", 0.06}}),
-            {0.02, 0.76, -1.24}, {-8, 0, 0}, {1,1,1}, acc.hex, acc.met, acc.rgh, true, 1, "smooth", "", 0.0, "carbon_fiber"));
+        // 5. Rear Spoiler: Integrated Ducktail Lip on GT Sports Car OR Swan-Neck Carbon Wing on Hypercar!
+        if (is_hyper) {
+            parts.push_back(mk_part("gt_airfoil_wing", "Carbon-Fiber Swan-Neck GT Wing", "wing",
+                JsonValue::object({{"span", 0.68}, {"chord", 0.24}, {"thickness", 0.04}, {"sweep", 0.06}}),
+                {0.02, 0.76, -1.24}, {-8, 0, 0}, {1,1,1}, acc.hex, acc.met, acc.rgh, true, 1, "smooth", "", 0.0, "carbon_fiber"));
 
-        parts.push_back(mk_part("wing_pylons", "Swan-Neck Aero Pylons", "wing",
-            JsonValue::object({{"span", 0.24}, {"chord", 0.16}, {"thickness", 0.03}, {"sweep", 0.12}}),
-            {0.24, 0.62, -1.18}, {0, 0, 88}, {1,1,1}, acc.hex, acc.met, acc.rgh, true, 1, "smooth", "", 0.0, "carbon_fiber"));
+            parts.push_back(mk_part("wing_pylons", "Swan-Neck Aero Pylons", "wing",
+                JsonValue::object({{"span", 0.24}, {"chord", 0.16}, {"thickness", 0.03}, {"sweep", 0.12}}),
+                {0.24, 0.62, -1.18}, {0, 0, 88}, {1,1,1}, acc.hex, acc.met, acc.rgh, true, 1, "smooth", "", 0.0, "carbon_fiber"));
+        } else {
+            parts.push_back(mk_part("ducktail_spoiler", "Sculpted Carbon Ducktail Lip Spoiler", "wing",
+                JsonValue::object({{"span", 0.56}, {"chord", 0.14}, {"thickness", 0.032}, {"sweep", 0.04}}),
+                {0.02, 0.55, -1.30}, {-14, 0, 0}, {1,1,1}, acc.hex, acc.met, acc.rgh, true, 1, "smooth", "", 0.0, "carbon_fiber"));
+        }
 
-        // 6. Angled Matrix Headlights & Rear Taillight Blade
-        parts.push_back(mk_part("matrix_headlights", "Angled Laser-LED Headlights", "sculpted_sdf",
+        // 6. Angled Laser-LED Matrix Headlights & Full-Width Rear LED Taillight Blade
+        parts.push_back(mk_part("matrix_headlights", "Angled Matrix Laser-LED Headlights", "sculpted_sdf",
             JsonValue::object({{"bounds", 0.35}, {"lobes", JsonValue::array({
                 mk_cap({-0.14, -0.02, 0.05}, {0.14, 0.03, -0.05}, 0.026, 0.022, 0.01)
             })}}),
@@ -578,8 +778,254 @@ inline JsonValue compile_prompt_cpp_symbolic(const std::string& prompt) {
             JsonValue::object({{"radius", 0.022}, {"height", 1.12}}),
             {0, 0.46, -1.36}, {0, 0, 90}, {1,1,1}, "#ef4444", 0.1, 0.1, false, 1, "smooth", "#ef4444", 0.95));
 
-        bp["title"] = "Aero Widebody GT Hypercar";
+        bp["title"] = is_hyper ? "Aero Widebody GT Hypercar" : "Sculpted Realistic GT Sports Car";
         bp["category"] = "vehicle";
+
+    } else if (contains_any(low, {"tank", "panzer", "apc", "artillery"})) {
+        MatSpec prim{"#3f6212", 0.42, 0.58}, acc{"#1e293b", 0.78, 0.38};
+        std::string glow = "#f97316";
+        extract_palette_cpp(prompt, prim, acc, glow);
+
+        parts.push_back(mk_part("tank_hull", "Sloped Composite Armor Hull", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.65}, {"lobes", JsonValue::array({
+                mk_lobe({0, 0, 0}, {0.72, 0.24, 1.32}, 0.06, "round_box"),
+                mk_cap({0, 0.04, 0.85}, {0, -0.06, 1.38}, 0.62, 0.42, 0.08)
+            })}}),
+            {0, 0.46, 0}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "scifi_panels", "", 0.0, "painted_armor"));
+
+        parts.push_back(mk_part("tank_treads", "Armored Continuous Track Pods", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.55}, {"lobes", JsonValue::array({
+                mk_lobe({0, 0, 0}, {0.20, 0.28, 1.36}, 0.12, "round_box")
+            })}}),
+            {0.76, 0.30, 0}, {0,0,0}, {1,1,1}, "#18181b", 0.30, 0.76, true, 1, "smooth", "", 0.0, "rubber_tire"));
+
+        parts.push_back(mk_part("tank_turret", "Low-Profile Reactive Armor Turret", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.05}, {"lobes", JsonValue::array({
+                mk_lobe({0, 0, -0.06}, {0.52, 0.20, 0.64}, 0.07, "round_box"),
+                mk_cap({0, 0.02, 0.20}, {0, 0.0, 0.62}, 0.36, 0.22, 0.06)
+            })}}),
+            {0, 0.84, -0.06}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "scifi_panels", "", 0.0, "painted_armor"));
+
+        parts.push_back(mk_part("smoothbore_cannon", "120mm Smoothbore Main Cannon & Muzzle Brake", "cylinder",
+            JsonValue::object({{"radius", 0.068}, {"height", 1.85}, {"sections", 24}}),
+            {0, 0.86, 1.18}, {88, 0, 0}, {1,1,1}, acc.hex, 0.88, 0.28, false, 1, "smooth", "", 0.0, "forged_metal"));
+
+        bp["title"] = "Armored Main Battle Tank";
+        bp["category"] = "vehicle";
+
+    } else if (contains_any(low, {"wolf", "dog", "hound", "fox", "cat", "lion", "tiger", "panther", "horse", "stag", "deer", "bear"})) {
+        bool is_horse = contains_any(low, {"horse", "stallion", "stag", "deer"});
+        MatSpec prim{is_horse ? "#78350f" : "#64748b", 0.08, 0.74}, acc{"#e2e8f0", 0.06, 0.68};
+        std::string glow = "#fbbf24";
+        extract_palette_cpp(prompt, prim, acc, glow);
+
+        parts.push_back(mk_part("quad_torso", "Anatomical Ribcage, Shoulders & Haunches", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.45}, {"lobes", JsonValue::array({
+                mk_cap({0, 0.06, 0.46}, {0, 0.02, -0.44}, 0.32, 0.25, 0.14),
+                mk_cap({0, 0.10, 0.42}, {0, 0.48, 0.76}, 0.24, 0.16, 0.12)
+            })}}),
+            {0, is_horse ? 1.18 : 0.92, 0}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "organic_muscle", "", 0.0, "wrapped_leather"));
+
+        parts.push_back(mk_part("quad_head", "Sculpted Cranium, Muzzle & Pointed Ears", "sculpted_sdf",
+            JsonValue::object({{"bounds", 0.65}, {"lobes", JsonValue::array({
+                mk_lobe({0, 0.04, -0.04}, {0.17, 0.16, 0.20}, 0.06),
+                mk_cap({0, 0.0, 0.06}, {0, -0.04, 0.34}, 0.13, 0.075, 0.06),
+                mk_cap({ 0.10, 0.14, -0.06}, { 0.14, 0.32, -0.04}, 0.055, 0.015, 0.03),
+                mk_cap({-0.10, 0.14, -0.06}, {-0.14, 0.32, -0.04}, 0.055, 0.015, 0.03)
+            })}}),
+            {0, is_horse ? 1.72 : 1.42, 0.84}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "organic_muscle", "", 0.0, "wrapped_leather"));
+
+        parts.push_back(mk_part("quad_forelegs", "Muscular Forelimbs & Paws", "sculpted_sdf",
+            JsonValue::object({{"bounds", 0.95}, {"lobes", JsonValue::array({
+                mk_cap({0, 0.38, 0.02}, {0, 0.02, 0.04}, 0.11, 0.075, 0.05),
+                mk_cap({0, 0.02, 0.04}, {0, -0.38, 0.06}, 0.072, 0.055, 0.04),
+                mk_lobe({0, -0.40, 0.10}, {0.075, 0.05, 0.10}, 0.03, "round_box")
+            })}}),
+            {0.22, is_horse ? 0.62 : 0.48, 0.44}, {0,0,0}, {1, is_horse ? 1.32 : 1.0, 1}, prim.hex, prim.met, prim.rgh, true, 1, "organic_muscle", "", 0.0, "wrapped_leather"));
+
+        parts.push_back(mk_part("quad_hindlegs", "Anatomical Hindquarters, Hocks & Paws", "sculpted_sdf",
+            JsonValue::object({{"bounds", 0.95}, {"lobes", JsonValue::array({
+                mk_cap({0, 0.40, 0.02}, {0, 0.04, -0.08}, 0.13, 0.08, 0.05),
+                mk_cap({0, 0.04, -0.08}, {0, -0.38, 0.02}, 0.075, 0.055, 0.04),
+                mk_lobe({0, -0.40, 0.06}, {0.075, 0.05, 0.10}, 0.03, "round_box")
+            })}}),
+            {0.23, is_horse ? 0.62 : 0.48, -0.42}, {0,0,0}, {1, is_horse ? 1.32 : 1.0, 1}, prim.hex, prim.met, prim.rgh, true, 1, "organic_muscle", "", 0.0, "wrapped_leather"));
+
+        parts.push_back(mk_part("quad_tail", "Flowing Sculpted Tail", "sculpted_sdf",
+            JsonValue::object({{"bounds", 0.75}, {"lobes", JsonValue::array({
+                mk_cap({0, 0.18, 0.24}, {0, -0.18, -0.34}, 0.095, 0.045, 0.06)
+            })}}),
+            {0, is_horse ? 1.12 : 0.86, -0.68}, {0,0,0}, {1,1,1}, acc.hex, acc.met, acc.rgh, false, 1, "organic_muscle", "", 0.0, "wrapped_leather"));
+
+        bp["title"] = is_horse ? "Sculpted Anatomical Stallion" : "Sculpted Anatomical Dire Wolf";
+        bp["category"] = "creature";
+
+    } else if (contains_any(low, {"house", "cottage", "cabin", "villa", "home", "hut"})) {
+        MatSpec prim{"#e7e5e4", 0.04, 0.86}, acc{"#991b1b", 0.08, 0.74};
+        std::string glow = "#fbbf24";
+        extract_palette_cpp(prompt, prim, acc, glow);
+
+        parts.push_back(mk_part("house_foundation", "Stone Terrace Foundation", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.50}, {"lobes", JsonValue::array({
+                mk_lobe({0, 0, 0}, {1.18, 0.14, 0.96}, 0.05, "round_box")
+            })}}),
+            {0, 0.14, 0}, {0,0,0}, {1,1,1}, "#57534e", 0.05, 0.90, false, 1, "stone", "", 0.0, "weathered_stone"));
+
+        parts.push_back(mk_part("house_walls", "Plastered Timber-Frame Walls & Recessed Doorway", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.35}, {"lobes", JsonValue::array({
+                mk_lobe({0, 0, 0}, {0.96, 0.56, 0.78}, 0.05, "round_box"),
+                mk_lobe({0, -0.22, 0.78}, {0.18, 0.34, 0.10}, 0.02, "round_box", "subtract")
+            })}}),
+            {0, 0.82, 0}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "stone", "", 0.0, "weathered_stone"));
+
+        parts.push_back(mk_part("pitched_roof", "Pitched Gable Tile Roof", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.45}, {"lobes", JsonValue::array({
+                mk_lobe({-0.36, 0, 0}, {0.68, 0.08, 0.90}, 0.04, "round_box")
+            })}}),
+            {0, 1.56, 0}, {0, 0, 32}, {1,1,1}, acc.hex, acc.met, acc.rgh, true, 1, "smooth", "", 0.0, "weathered_stone"));
+
+        parts.push_back(mk_part("stone_chimney", "Masonry Fireplace Chimney", "sculpted_sdf",
+            JsonValue::object({{"bounds", 0.65}, {"lobes", JsonValue::array({
+                mk_lobe({0, 0, 0}, {0.16, 0.48, 0.16}, 0.03, "round_box")
+            })}}),
+            {0.62, 1.72, -0.28}, {0,0,0}, {1,1,1}, "#78716c", 0.05, 0.88, false, 1, "stone", "", 0.0, "weathered_stone"));
+
+        parts.push_back(mk_part("warm_windows", "Warm Lit Cottage Windows", "capsule",
+            JsonValue::object({{"radius", 0.11}, {"height", 0.18}}),
+            {0.52, 0.92, 0.76}, {0,0,0}, {1.0, 1.0, 0.35}, glow, 0.05, 0.15, true, 1, "smooth", glow, 0.90));
+
+        bp["title"] = "Sculpted Timber & Stone Cottage";
+        bp["category"] = "architecture";
+
+    } else if (contains_any(low, {"chair", "armchair", "throne", "sofa", "couch", "stool"})) {
+        MatSpec prim{"#7c2d12", 0.08, 0.72}, acc{"#d4af37", 0.88, 0.24};
+        std::string glow = "#fbbf24";
+        extract_palette_cpp(prompt, prim, acc, glow);
+
+        parts.push_back(mk_part("seat_cushion", "Tufted Leather Seat & Sculpted Backrest", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.15}, {"lobes", JsonValue::array({
+                mk_lobe({0, -0.22, 0.06}, {0.48, 0.12, 0.46}, 0.06, "round_box"),
+                mk_lobe({0,  0.32, -0.32}, {0.46, 0.52, 0.12}, 0.07, "round_box"),
+                mk_lobe({ 0.48, 0.0, 0.02}, {0.09, 0.22, 0.42}, 0.05, "round_box"),
+                mk_lobe({-0.48, 0.0, 0.02}, {0.09, 0.22, 0.42}, 0.05, "round_box")
+            })}}),
+            {0, 0.76, 0}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "organic_muscle", "", 0.0, "wrapped_leather"));
+
+        parts.push_back(mk_part("chair_legs", "Turned Hardwood & Brass Legs", "cylinder",
+            JsonValue::object({{"radius", 0.045}, {"height", 0.52}, {"sections", 20}}),
+            {0.40, 0.26, 0.36}, {0,0,0}, {1,1,1}, acc.hex, acc.met, acc.rgh, false, 4, "smooth", "", 0.0, "forged_metal"));
+
+        bp["title"] = "Sculpted Tufted Leather Armchair";
+        bp["category"] = "furniture";
+
+    } else if (contains_any(low, {"table", "desk", "workbench"})) {
+        MatSpec prim{"#78350f", 0.06, 0.68}, acc{"#1e293b", 0.84, 0.30};
+        std::string glow = "#38bdf8";
+        extract_palette_cpp(prompt, prim, acc, glow);
+
+        parts.push_back(mk_part("tabletop_slab", "Beveled Live-Edge Walnut Tabletop", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.45}, {"lobes", JsonValue::array({
+                mk_lobe({0, 0, 0}, {1.12, 0.055, 0.66}, 0.03, "round_box")
+            })}}),
+            {0, 0.78, 0}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "smooth", "", 0.0, "wrapped_leather"));
+
+        parts.push_back(mk_part("steel_trestle_legs", "Powder-Coated Steel Trestle Legs", "cylinder",
+            JsonValue::object({{"radius", 0.045}, {"height", 0.76}, {"sections", 20}}),
+            {0.92, 0.38, 0.50}, {0,0,0}, {1,1,1}, acc.hex, acc.met, acc.rgh, true, 1, "smooth", "", 0.0, "forged_metal"));
+
+        parts.push_back(mk_part("rear_trestle_legs", "Rear Steel Trestle Legs", "cylinder",
+            JsonValue::object({{"radius", 0.045}, {"height", 0.76}, {"sections", 20}}),
+            {0.92, 0.38, -0.50}, {0,0,0}, {1,1,1}, acc.hex, acc.met, acc.rgh, true, 1, "smooth", "", 0.0, "forged_metal"));
+
+        bp["title"] = "Sculpted Walnut & Steel Studio Desk";
+        bp["category"] = "furniture";
+
+    } else if (contains_any(low, {"tree", "pine", "oak", "bonsai"})) {
+        MatSpec prim{"#15803d", 0.04, 0.84}, acc{"#78350f", 0.05, 0.88};
+        std::string glow = "#4ade80";
+        extract_palette_cpp(prompt, prim, acc, glow);
+
+        parts.push_back(mk_part("gnarled_trunk", "Gnarled Bark Trunk & Root Flare", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.35}, {"lobes", JsonValue::array({
+                mk_cap({0, -0.68, 0}, {0.06, 0.42, 0.02}, 0.24, 0.12, 0.12),
+                mk_cap({0.06, 0.18, 0.02}, { 0.44, 0.62,  0.14}, 0.11, 0.05, 0.10),
+                mk_cap({0.06, 0.24, 0.02}, {-0.40, 0.68, -0.12}, 0.11, 0.05, 0.10)
+            })}}),
+            {0, 0.78, 0}, {0,0,0}, {1,1,1}, acc.hex, acc.met, acc.rgh, false, 1, "organic_muscle", "", 0.0, "wrapped_leather"));
+
+        parts.push_back(mk_part("foliage_canopy", "Layered Organic Leaf Canopy", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.45}, {"lobes", JsonValue::array({
+                mk_lobe({0, 0.18, 0}, {0.72, 0.46, 0.70}, 0.18),
+                mk_lobe({ 0.48, -0.06,  0.18}, {0.48, 0.34, 0.46}, 0.16),
+                mk_lobe({-0.46,  0.02, -0.16}, {0.48, 0.36, 0.46}, 0.16)
+            })}}),
+            {0, 1.72, 0}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "scales", "", 0.0, "weathered_stone"));
+
+        bp["title"] = "Sculpted Ancient Oak Tree";
+        bp["category"] = "nature";
+
+    } else if (contains_any(low, {"guitar", "violin", "cello", "lute", "ukulele"})) {
+        MatSpec prim{"#b45309", 0.18, 0.26}, acc{"#18181b", 0.35, 0.30};
+        std::string glow = "#fbbf24";
+        extract_palette_cpp(prompt, prim, acc, glow);
+
+        parts.push_back(mk_part("guitar_body", "Figure-8 Sunburst Resonant Body & Soundhole", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.15}, {"lobes", JsonValue::array({
+                mk_lobe({0, -0.26, 0}, {0.46, 0.42, 0.12}, 0.12),
+                mk_lobe({0,  0.28, 0}, {0.35, 0.32, 0.11}, 0.12),
+                mk_lobe({0,  0.12, 0.11}, {0.13, 0.13, 0.06}, 0.02, "ellipsoid", "subtract")
+            })}}),
+            {0, 0.78, 0}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "smooth", "", 0.0, "wrapped_leather"));
+
+        parts.push_back(mk_part("fretboard_neck", "Rosewood Fretboard & Headstock", "sculpted_sdf",
+            JsonValue::object({{"bounds", 1.15}, {"lobes", JsonValue::array({
+                mk_lobe({0, 0.0, 0.02}, {0.065, 0.68, 0.032}, 0.015, "round_box"),
+                mk_lobe({0, 0.78, -0.02}, {0.095, 0.16, 0.028}, 0.02, "round_box")
+            })}}),
+            {0, 1.68, 0.04}, {0,0,0}, {1,1,1}, acc.hex, acc.met, acc.rgh, false, 1, "smooth", "", 0.0, "forged_metal"));
+
+        parts.push_back(mk_part("bridge_saddle", "Machined Brass Bridge & Pickups", "sculpted_sdf",
+            JsonValue::object({{"bounds", 0.45}, {"lobes", JsonValue::array({
+                mk_lobe({0, 0, 0}, {0.16, 0.045, 0.035}, 0.01, "round_box")
+            })}}),
+            {0, 0.62, 0.12}, {0,0,0}, {1,1,1}, "#d4af37", 0.92, 0.20, false, 1, "smooth", "", 0.0, "forged_metal"));
+
+        bp["title"] = "Sculpted Luthier Sunburst Guitar";
+        bp["category"] = "prop";
+
+    } else if (contains_any(low, {"shield", "buckler", "aegis", "helmet", "crown"})) {
+        bool is_helm = contains_any(low, {"helmet", "crown"});
+        MatSpec prim{"#94a3b8", 0.90, 0.22}, acc{"#d4af37", 0.94, 0.18};
+        std::string glow = "#38bdf8";
+        extract_palette_cpp(prompt, prim, acc, glow);
+
+        if (is_helm) {
+            parts.push_back(mk_part("spartan_helm", "Forged Corinthian War Helmet", "sculpted_sdf",
+                JsonValue::object({{"bounds", 0.95}, {"lobes", JsonValue::array({
+                    mk_lobe({0, 0.08, -0.02}, {0.36, 0.42, 0.40}, 0.08),
+                    mk_lobe({0, -0.08, 0.36}, {0.08, 0.24, 0.12}, 0.02, "round_box", "subtract"),
+                    mk_lobe({0.16, 0.06, 0.34}, {0.11, 0.05, 0.10}, 0.015, "round_box", "subtract"),
+                    mk_lobe({-0.16, 0.06, 0.34}, {0.11, 0.05, 0.10}, 0.015, "round_box", "subtract")
+                })}}),
+                {0, 0.92, 0}, {0,0,0}, {1,1,1}, prim.hex, prim.met, prim.rgh, false, 1, "smooth", "", 0.0, "damascus_steel"));
+            parts.push_back(mk_part("helm_crest", "Sculpted Horsehair Plume Crest", "sculpted_sdf",
+                JsonValue::object({{"bounds", 0.85}, {"lobes", JsonValue::array({
+                    mk_cap({0, 0.12, 0.32}, {0, -0.10, -0.44}, 0.14, 0.10, 0.06)
+                })}}),
+                {0, 1.42, -0.04}, {0,0,0}, {0.42, 1.0, 1.0}, "#dc2626", 0.12, 0.72, false, 1, "organic_muscle", "", 0.0, "wrapped_leather"));
+            bp["title"] = "Forged Steel War Helmet";
+        } else {
+            parts.push_back(mk_part("heater_shield", "Domed Steel & Gold-Trimmed Kite Shield", "sculpted_sdf",
+                JsonValue::object({{"bounds", 1.25}, {"lobes", JsonValue::array({
+                    mk_cap({0, 0.42, 0.04}, {0, -0.56, 0.02}, 0.56, 0.18, 0.10)
+                })}}),
+                {0, 1.05, 0}, {0,0,0}, {1.0, 1.0, 0.24}, prim.hex, prim.met, prim.rgh, false, 1, "smooth", "", 0.0, "damascus_steel"));
+            parts.push_back(mk_part("shield_boss", "Gilded Central Umbo Boss", "torus",
+                JsonValue::object({{"major_r", 0.22}, {"minor_r", 0.042}}),
+                {0, 1.12, 0.14}, {90, 0, 0}, {1,1,1}, acc.hex, acc.met, acc.rgh, false, 1, "smooth", "", 0.0, "gold_filigree"));
+            bp["title"] = "Forged Heraldic Kite Shield";
+        }
+        bp["category"] = "armor";
 
     } else if (contains_any(low, {"castle", "tower", "watchtower", "citadel", "fortress", "keep", "building", "cathedral"})) {
         MatSpec prim{"#78716c", 0.05, 0.88}, acc{"#1e3a8a", 0.16, 0.62};
@@ -774,6 +1220,7 @@ inline JsonValue compile_prompt_cpp_symbolic(const std::string& prompt) {
         bp["category"] = "mecha";
 
     } else {
+        if (out_matched) *out_matched = false;
         MatSpec prim{"#94a3b8", 0.72, 0.28}, acc{"#d4af37", 0.92, 0.20};
         std::string glow = "#38bdf8";
         extract_palette_cpp(prompt, prim, acc, glow);
@@ -816,16 +1263,84 @@ inline JsonValue compile_prompt_cpp_symbolic(const std::string& prompt) {
     return bp;
 }
 
-inline bool try_external_llm_blueprint(const RouterConfig& cfg, const std::string& sys_prompt, const std::string& user_msg, JsonValue& out_bp, std::string& out_provider) {
+inline void sanitize_llm_blueprint(JsonValue& bp, const std::string& prompt) {
+    if (!bp.is_object()) return;
+    if (bp.get_str("title", "").empty()) {
+        bp["title"] = prompt.size() > 42 ? prompt.substr(0, 42) : (prompt.empty() ? "Sculpted 3D Asset" : prompt);
+    }
+    if (bp.get_str("category", "").empty()) bp["category"] = "prop";
+    if (bp.get_str("enhanced_prompt", "").empty()) {
+        bp["enhanced_prompt"] = prompt + " — AI-architected multi-part C++20 SDF + PBR assembly.";
+    }
+    if (!bp.has("parts") || !bp["parts"].is_array()) return;
+
+    auto& parts = bp["parts"];
+    for (size_t i = 0; i < parts.size(); ++i) {
+        auto& p = parts[i];
+        if (!p.is_object()) continue;
+        if (p.get_str("id", "").empty()) p["id"] = "part_" + std::to_string(i + 1);
+        if (p.get_str("name", "").empty()) p["name"] = "Component " + std::to_string(i + 1);
+
+        std::string pr = to_lower_str(p.get_str("primitive", "round_box"));
+        if (pr == "box" || pr == "cube") pr = "round_box";
+        else if (pr == "wheel" || pr == "tire") pr = "wheel_assembly";
+        else if (pr == "ring") pr = "torus";
+        else if (pr == "tube" || pr == "rod" || pr == "pipe") pr = "cylinder";
+        else if (pr == "ball" || pr == "ellipsoid") pr = "sphere";
+        else if (pr == "pill") pr = "capsule";
+        else if (pr == "fin") pr = "wing";
+        else if (pr == "vase" || pr == "lathe") pr = "lathe_vase";
+        else if (pr == "crystal" || pr == "gem") pr = "octa_crystal";
+        else if (pr == "nozzle" || pr == "exhaust") pr = "serrated_nozzle";
+        else if (pr == "sculpt" || pr == "sdf") pr = "sculpted_sdf";
+        p["primitive"] = pr;
+
+        if (!p.has("params") || !p["params"].is_object()) p["params"] = JsonValue::object();
+
+        auto fix_vec3 = [&](const char* key, double def_v, double min_v, double max_v, bool non_zero) {
+            if (!p.has(key) || !p[key].is_array() || p[key].size() < 3) {
+                p[key] = JsonValue::array({def_v, def_v, def_v});
+            } else {
+                for (size_t a = 0; a < 3; ++a) {
+                    double v = std::clamp(p[key][a].as_num(def_v), min_v, max_v);
+                    if (non_zero && std::fabs(v) < 0.04) v = (v < 0.0 ? -0.08 : 0.08);
+                    p[key][a] = v;
+                }
+            }
+        };
+        fix_vec3("position", 0.0, -3.5, 3.5, false);
+        fix_vec3("rotation", 0.0, -360.0, 360.0, false);
+        fix_vec3("scale", 1.0, 0.05, 3.5, true);
+
+        std::string col = p.get_str("color", "#94a3b8");
+        if (col.size() != 7 || col[0] != '#') p["color"] = "#94a3b8";
+        double met = std::clamp(p.get_num("metallic", 0.45), 0.0, 1.0);
+        double rgh = std::clamp(p.get_num("roughness", 0.35), 0.04, 1.0);
+        p["metallic"] = met;
+        p["roughness"] = rgh;
+        if (!p.has("mirror_x")) p["mirror_x"] = false;
+        p["radial_count"] = std::clamp(p.get_int("radial_count", 1), 1, 16);
+        if (p.get_str("detail_style", "").empty()) p["detail_style"] = "smooth";
+        if (p.get_str("finish", "").empty()) {
+            p["finish"] = (met >= 0.65) ? "forged_metal" : ((rgh >= 0.72) ? "wrapped_leather" : "painted_armor");
+        }
+    }
+}
+
+inline bool try_external_llm_blueprint(const RouterConfig& cfg, const std::string& sys_prompt, const std::string& user_msg, JsonValue& out_bp, std::string& out_provider, bool allow_keyless_cloud = false) {
     if (cfg.provider == "builtin_symbolic") return false;
 
-    auto extract_bp = [](const std::string& txt, JsonValue& parsed) -> bool {
+    auto extract_bp = [&](const std::string& txt, JsonValue& parsed) -> bool {
         auto s = txt.find('{');
         auto e = txt.rfind('}');
         if (s == std::string::npos || e == std::string::npos || e <= s) return false;
         try {
             parsed = JsonValue::parse(std::string_view(txt).substr(s, e - s + 1));
-            return parsed.is_object() && parsed.has("parts") && parsed["parts"].is_array() && parsed["parts"].size() >= 3;
+            if (parsed.is_object() && parsed.has("parts") && parsed["parts"].is_array() && parsed["parts"].size() >= 3) {
+                sanitize_llm_blueprint(parsed, user_msg);
+                return true;
+            }
+            return false;
         } catch (...) {
             return false;
         }
@@ -835,7 +1350,7 @@ inline bool try_external_llm_blueprint(const RouterConfig& cfg, const std::strin
         std::string model = cfg.ollama_model;
         if (model.empty()) {
             JsonValue tags;
-            if (curl_util::http_get_json(cfg.ollama_url + "/api/tags", tags, 600) && tags["models"].size() > 0) {
+            if (curl_util::http_get_json(cfg.ollama_url + "/api/tags", tags, 500) && tags["models"].size() > 0) {
                 model = tags["models"][0].get_str("name", "");
             }
         }
@@ -858,25 +1373,25 @@ inline bool try_external_llm_blueprint(const RouterConfig& cfg, const std::strin
         }
     }
 
-    if (cfg.provider == "auto" || cfg.provider == "lm_studio" || cfg.provider == "custom_openai") {
+    if (cfg.provider == "auto" || cfg.provider == "lm_studio" || cfg.provider == "custom_openai" || cfg.provider == "openai_compat") {
         std::string base = cfg.openai_base_url;
         std::string model = cfg.openai_model;
         if (model.empty()) {
             JsonValue mres;
-            if (curl_util::http_get_json(base + "/models", mres, 600) && mres["data"].size() > 0) {
+            if (curl_util::http_get_json(base + "/models", mres, 500) && mres["data"].size() > 0) {
                 model = mres["data"][0].get_str("id", "local-model");
             }
         }
         if (!model.empty()) {
             JsonValue req = JsonValue::object();
             req["model"] = model;
-            req["temperature"] = 0.3;
+            req["temperature"] = 0.25;
             req["messages"] = JsonValue::array({
                 JsonValue::object({{"role", "system"}, {"content", sys_prompt}}),
                 JsonValue::object({{"role", "user"}, {"content", user_msg}})
             });
             JsonValue resp;
-            if (curl_util::http_post_json(base + "/chat/completions", req.dump(0), cfg.openai_api_key, resp, 20000)) {
+            if (curl_util::http_post_json(base + "/chat/completions", req.dump(0), cfg.openai_api_key, resp, 18000)) {
                 const auto& ch = resp.at_or_null("choices");
                 if (ch.is_array() && ch.size() > 0) {
                     std::string content = ch[0].at_or_null("message").get_str("content", "");
@@ -888,31 +1403,70 @@ inline bool try_external_llm_blueprint(const RouterConfig& cfg, const std::strin
             }
         }
     }
+
+    // Zero-Key Free Cloud AI Fallback for novel 3D objects not in the built-in sculpted library!
+    if (allow_keyless_cloud && cfg.provider == "auto") {
+        struct KeylessEndpoint { const char* name; const char* url; const char* model; const char* key; bool low_reasoning; };
+        static constexpr KeylessEndpoint kFreeCloud[] = {
+            {"LLM7.io Free Cloud", "https://api.llm7.io/v1/chat/completions", "default", "", false},
+            {"Pollinations Free Cloud", "https://text.pollinations.ai/openai/chat/completions", "openai", "", true}
+        };
+        for (const auto& ep : kFreeCloud) {
+            JsonValue req = JsonValue::object();
+            req["model"] = ep.model;
+            req["temperature"] = 0.2;
+            if (ep.low_reasoning) req["reasoning_effort"] = "low";
+            req["messages"] = JsonValue::array({
+                JsonValue::object({{"role", "system"}, {"content", sys_prompt}}),
+                JsonValue::object({{"role", "user"}, {"content", "Design a detailed 6-part 3D object blueprint for: " + user_msg}})
+            });
+            JsonValue resp;
+            if (curl_util::http_post_json(ep.url, req.dump(0), ep.key, resp, 23000)) {
+                const auto& ch = resp.at_or_null("choices");
+                if (ch.is_array() && ch.size() > 0) {
+                    std::string content = ch[0].at_or_null("message").get_str("content", "");
+                    if (extract_bp(content, out_bp)) {
+                        out_provider = std::string(ep.name) + " + C++20 SDF/PBR";
+                        return true;
+                    }
+                }
+            }
+        }
+    }
     return false;
 }
 
 inline std::pair<JsonValue, std::string> generate_blueprint_routed(const RouterConfig& cfg, const std::string& prompt) {
     static const std::string kSys =
-        "Return ONLY valid JSON for a realistic multi-part sculpted 3D asset (6-12 parts, NEVER plain boxes when sculpted_sdf fits): "
+        "Return ONLY valid JSON (no markdown) for a realistic multi-part 3D asset (6-10 parts, centered around x=0, ground at y=0, height ~1.2-2.2m, front=+Z): "
         "{\"title\":str,\"category\":str,\"enhanced_prompt\":str,\"parts\":[{\"id\":str,\"name\":str,"
-        "\"primitive\":\"sculpted_sdf|bat_wing|wheel_assembly|serrated_nozzle|blade|gear|lathe_vase|thruster|chalice|column|wing|battlement_ring|octa_crystal|torus|capsule|cylinder|hex_prism|cone|sphere|round_box\","
-        "\"params\":{},\"detail_style\":\"smooth|scifi_panels|stone|scales|gyroid|organic_muscle\","
+        "\"primitive\":\"sculpted_sdf|wheel_assembly|serrated_nozzle|blade|gear|lathe_vase|thruster|chalice|column|wing|battlement_ring|octa_crystal|torus|capsule|cylinder|hex_prism|cone|sphere|round_box\","
+        "\"params\":{},\"detail_style\":\"smooth|scifi_panels|stone|scales|organic_muscle\","
         "\"finish\":\"dragon_scales|damascus_steel|carbon_fiber|painted_armor|weathered_stone|wrapped_leather|carved_bone|rubber_tire|forged_metal\","
         "\"position\":[x,y,z],\"rotation\":[rx,ry,rz],\"scale\":[sx,sy,sz],"
-        "\"mirror_x\":bool,\"radial_count\":int,\"color\":\"#RRGGBB\",\"metallic\":0.5,\"roughness\":0.3,\"emissive\":null,\"emissive_strength\":0.0}]}";
+        "\"mirror_x\":bool,\"radial_count\":1,\"color\":\"#RRGGBB\",\"metallic\":0.5,\"roughness\":0.3,\"emissive\":null,\"emissive_strength\":0.0}]}. "
+        "For sculpted_sdf params use {\"bounds\":1.3,\"lobes\":[{\"shape\":\"round_box|ellipsoid\",\"center\":[x,y,z],\"radii\":[rx,ry,rz],\"blend\":0.08,\"op\":\"smooth_union|subtract\"}]} "
+        "or {\"shape\":\"tapered_capsule\",\"p0\":[x0,y0,z0],\"p1\":[x1,y1,z1],\"r0\":0.2,\"r1\":0.1,\"blend\":0.08}. "
+        "For cylinder/cone/capsule use {\"radius\":0.2,\"height\":0.8}; sphere {\"radius\":0.3}; torus {\"major_r\":0.4,\"minor_r\":0.06}; wheel_assembly {\"radius\":0.3,\"width\":0.22,\"spokes\":10}; round_box {\"extents\":[0.5,0.3,0.5],\"bevel\":0.05}.";
+
+    bool matched_builtin = false;
+    JsonValue symbolic_bp = compile_prompt_cpp_symbolic(prompt, &matched_builtin);
 
     JsonValue bp;
     std::string prov;
-    if (try_external_llm_blueprint(cfg, kSys, prompt, bp, prov)) {
+    // Try local/configured LLM first; if prompt is a novel object (!matched_builtin), also unlock keyless Free Cloud AI!
+    if (try_external_llm_blueprint(cfg, kSys, prompt, bp, prov, !matched_builtin)) {
         return {bp, prov};
     }
-    return {compile_prompt_cpp_symbolic(prompt), "Falcon C++20 Sculpted SDF + PBR Architect"};
+    return {symbolic_bp, "Falcon C++20 Sculpted SDF + PBR Architect"};
 }
 
 inline JsonValue agent_chat_cpp(const RouterConfig& cfg, const std::string& message, const JsonValue* current_bp) {
     std::string low = to_lower_str(message);
-    bool is_edit = (current_bp != nullptr && current_bp->is_object() && current_bp->has("parts")) &&
-                   contains_any(low, {"make", "change", "color", "gold", "silver", "obsidian", "chrome", "matte", "damascus", "carbon",
+    bool is_new_build_cmd = contains_any(low, {"create", "build", "generate", "synthesize", "model of", "make a", "make an", "make me"});
+    bool is_edit = !is_new_build_cmd &&
+                   (current_bp != nullptr && current_bp->is_object() && current_bp->has("parts")) &&
+                   contains_any(low, {"make it", "change", "color", "recolor", "gold", "silver", "obsidian", "chrome", "matte", "damascus", "carbon",
                                       "glow", "neon", "plasma", "taller", "wider", "bigger", "larger", "add wing", "add base", "pedestal"});
 
     if (is_edit) {

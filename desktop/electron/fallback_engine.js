@@ -120,6 +120,11 @@ function detectPromptPalette(prompt) {
   return { ...(hit || {}), emissiveHex, emissiveStrength: emissiveHex ? 0.95 : 0 };
 }
 
+function hasWord(text, kw) {
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b${escaped}(?:e?s)?\\b`, 'i').test(text || '');
+}
+
 function pickStarterArchetype(starterDir, prompt) {
   if (!fs.existsSync(starterDir)) return null;
   const jsons = fs
@@ -129,25 +134,24 @@ function pickStarterArchetype(starterDir, prompt) {
   if (jsons.length === 0) return null;
 
   const low = (prompt || '').toLowerCase();
+  // Match against m.title FIRST with strict word boundaries (so "car" never matches "carved"!)
   const matchBy = (kws) =>
-    jsons.find((m) => {
-      const t = `${m.title} ${m.prompt}`.toLowerCase();
-      return kws.some((k) => t.includes(k));
-    });
+    jsons.find((m) => kws.some((k) => hasWord(m.title || '', k))) ||
+    jsons.find((m) => kws.some((k) => hasWord(m.prompt || '', k)));
 
-  if (['dragon', 'wyvern', 'monster', 'beast', 'creature', 'demon'].some((k) => low.includes(k))) {
+  if (['dragon', 'wyvern', 'monster', 'beast', 'creature', 'demon', 'wolf', 'dog', 'lion'].some((k) => hasWord(low, k))) {
     return matchBy(['wyvern', 'dragon']) || jsons[0];
   }
-  if (['sword', 'katana', 'blade', 'dagger', 'saber', 'axe'].some((k) => low.includes(k))) {
+  if (['car', 'automobile', 'sedan', 'hypercar', 'supercar', 'coupe', 'vehicle', 'rover', 'suv', 'truck', 'pickup', 'porsche', 'ferrari', 'lamborghini'].some((k) => hasWord(low, k))) {
+    return matchBy(['hypercar', 'sports car', 'car']) || jsons[0];
+  }
+  if (['sword', 'katana', 'blade', 'dagger', 'saber', 'axe'].some((k) => hasWord(low, k))) {
     return matchBy(['katana', 'sword', 'blade']) || jsons[0];
   }
-  if (['car', 'hypercar', 'supercar', 'coupe', 'vehicle', 'rover'].some((k) => low.includes(k))) {
-    return matchBy(['hypercar', 'car']) || jsons[0];
-  }
-  if (['rifle', 'gun', 'railgun', 'blaster', 'sniper', 'pistol'].some((k) => low.includes(k))) {
+  if (['rifle', 'gun', 'railgun', 'blaster', 'sniper', 'pistol'].some((k) => hasWord(low, k))) {
     return matchBy(['railgun', 'rifle']) || jsons[0];
   }
-  if (['castle', 'citadel', 'tower', 'keep', 'fortress'].some((k) => low.includes(k))) {
+  if (['castle', 'citadel', 'tower', 'keep', 'fortress', 'house', 'cottage', 'building'].some((k) => hasWord(low, k))) {
     return matchBy(['citadel', 'keep', 'castle']) || jsons[0];
   }
   return matchBy(['mecha', 'gundanium']) || jsons[0];

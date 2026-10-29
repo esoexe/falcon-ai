@@ -299,7 +299,9 @@ std::vector<std::string> split_path(const std::string& path) {
 } // namespace
 
 int main(int argc, char** argv) {
+#ifndef _WIN32
     curl_global_init(CURL_GLOBAL_DEFAULT);
+#endif
 
     fs::path base_dir = fs::current_path();
     uint16_t port = 8000;
@@ -988,6 +990,8 @@ int main(int argc, char** argv) {
     });
 
     server.listen_forever("0.0.0.0", port);
+#ifndef _WIN32
     curl_global_cleanup();
+#endif
     return 0;
 }

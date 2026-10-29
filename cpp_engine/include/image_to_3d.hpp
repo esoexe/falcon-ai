@@ -11,12 +11,29 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include <jpeglib.h>
-#include <png.h>
+#include <memory>
+#include <mutex>
 #include <queue>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <winsock2.h>
+#include <windows.h>
+#include <objidl.h>
+#include <shlwapi.h>
+#include <gdiplus.h>
+#else
+#include <jpeglib.h>
+#include <png.h>
+#endif
 
 namespace openmesh {
 
@@ -26,6 +43,59 @@ struct ImageRGBA {
     std::vector<uint8_t> pixels; // R, G, B, A (4 bytes per pixel)
 };
 
+#ifdef _WIN32
+inline bool decode_win32_gdiplus_memory(const uint8_t* data, size_t len, ImageRGBA& out) {
+    if (!data || len < 4) return false;
+    static std::once_flag s_once;
+    static ULONG_PTR s_token = 0;
+    std::call_once(s_once, []() {
+        Gdiplus::GdiplusStartupInput input;
+        Gdiplus::GdiplusStartup(&s_token, &input, nullptr);
+    });
+
+    IStream* stm = ::SHCreateMemStream(data, static_cast<UINT>(len));
+    if (!stm) return false;
+
+    std::unique_ptr<Gdiplus::Bitmap> bmp(Gdiplus::Bitmap::FromStream(stm));
+    stm->Release();
+    if (!bmp || bmp->GetLastStatus() != Gdiplus::Ok) return false;
+
+    UINT w = bmp->GetWidth();
+    UINT h = bmp->GetHeight();
+    if (w == 0 || h == 0) return false;
+
+    Gdiplus::Rect rect(0, 0, static_cast<INT>(w), static_cast<INT>(h));
+    Gdiplus::BitmapData bd{};
+    if (bmp->LockBits(&rect, Gdiplus::ImageLockModeRead, PixelFormat32bppARGB, &bd) != Gdiplus::Ok) {
+        return false;
+    }
+
+    out.width = static_cast<int>(w);
+    out.height = static_cast<int>(h);
+    out.pixels.resize(static_cast<size_t>(w) * h * 4);
+
+    const uint8_t* base = static_cast<const uint8_t*>(bd.Scan0);
+    for (UINT y = 0; y < h; ++y) {
+        const uint8_t* row = base + static_cast<ptrdiff_t>(y) * bd.Stride;
+        uint8_t* dst = &out.pixels[static_cast<size_t>(y) * w * 4];
+        for (UINT x = 0; x < w; ++x) {
+            // PixelFormat32bppARGB in little-endian memory is [B, G, R, A]
+            dst[x * 4 + 0] = row[x * 4 + 2];
+            dst[x * 4 + 1] = row[x * 4 + 1];
+            dst[x * 4 + 2] = row[x * 4 + 0];
+            dst[x * 4 + 3] = row[x * 4 + 3];
+        }
+    }
+    bmp->UnlockBits(&bd);
+    return true;
+}
+
+inline ImageRGBA decode_image_bytes(const std::vector<uint8_t>& bytes) {
+    ImageRGBA img;
+    if (decode_win32_gdiplus_memory(bytes.data(), bytes.size(), img)) return img;
+    throw std::runtime_error("Unsupported or corrupt image format (upload PNG, JPEG, BMP, or GIF)");
+}
+#else
 inline bool decode_png_memory(const uint8_t* data, size_t len, ImageRGBA& out) {
     if (len < 8 || std::memcmp(data, "\x89PNG\r\n\x1a\n", 8) != 0) return false;
     png_image image{};
@@ -83,6 +153,7 @@ inline ImageRGBA decode_image_bytes(const std::vector<uint8_t>& bytes) {
     if (decode_jpeg_memory(bytes.data(), bytes.size(), img)) return img;
     throw std::runtime_error("Unsupported or corrupt image format (upload PNG or JPEG)");
 }
+#endif
 
 // Bilinear resize into a padded square RGBA canvas
 inline ImageRGBA resize_into_padded_square(const ImageRGBA& src, int res) {

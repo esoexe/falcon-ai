@@ -4,23 +4,45 @@
  * with Multipart Form-Data Binary Upload Parser, CORS, and Static File Serving.
  */
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
+
 #include <atomic>
 #include <csignal>
 #include <cstring>
 #include <functional>
 #include <iostream>
 #include <map>
-#include <netinet/in.h>
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <sys/socket.h>
 #include <thread>
-#include <unistd.h>
 #include <vector>
 
 namespace openmesh {
+
+#ifdef _WIN32
+using socket_t = SOCKET;
+constexpr socket_t kInvalidSocket = INVALID_SOCKET;
+inline void close_socket_fd(socket_t s) { if (s != INVALID_SOCKET) ::closesocket(s); }
+#else
+using socket_t = int;
+constexpr socket_t kInvalidSocket = -1;
+inline void close_socket_fd(socket_t s) { if (s >= 0) ::close(s); }
+#endif
 
 struct MultipartPart {
     std::string name;
@@ -135,35 +157,42 @@ public:
     explicit HttpServer(Handler handler) : handler_(std::move(handler)) {}
 
     void listen_forever(const std::string& host, uint16_t port) {
+#ifdef _WIN32
+        WSADATA wsa{};
+        if (::WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+            throw std::runtime_error("WSAStartup() failed");
+        }
+#else
         std::signal(SIGPIPE, SIG_IGN);
+#endif
 
-        int server_fd = ::socket(AF_INET, SOCK_STREAM, 0);
-        if (server_fd < 0) throw std::runtime_error("socket() failed");
+        socket_t server_fd = ::socket(AF_INET, SOCK_STREAM, 0);
+        if (server_fd == kInvalidSocket) throw std::runtime_error("socket() failed");
 
         int opt = 1;
-        ::setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+        ::setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&opt), sizeof(opt));
 
         sockaddr_in addr{};
         addr.sin_family = AF_INET;
         addr.sin_port = htons(port);
         addr.sin_addr.s_addr = (host == "0.0.0.0") ? INADDR_ANY : ::inet_addr(host.c_str());
 
-        if (::bind(server_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
-            ::close(server_fd);
+        if (::bind(server_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
+            close_socket_fd(server_fd);
             throw std::runtime_error("bind() failed on port " + std::to_string(port));
         }
-        if (::listen(server_fd, 128) < 0) {
-            ::close(server_fd);
+        if (::listen(server_fd, 128) != 0) {
+            close_socket_fd(server_fd);
             throw std::runtime_error("listen() failed");
         }
 
-        std::cout << "[OpenMesh C++20 Server] Listening on http://" << host << ":" << port << std::endl;
+        std::cout << "[Falcon AI C++20 Server] Listening on http://" << host << ":" << port << std::endl;
 
         while (true) {
             sockaddr_in client_addr{};
             socklen_t clen = sizeof(client_addr);
-            int cfd = ::accept(server_fd, reinterpret_cast<sockaddr*>(&client_addr), &clen);
-            if (cfd < 0) continue;
+            socket_t cfd = ::accept(server_fd, reinterpret_cast<sockaddr*>(&client_addr), &clen);
+            if (cfd == kInvalidSocket) continue;
 
             std::thread([this, cfd]() {
                 this->handle_client(cfd);
@@ -185,21 +214,32 @@ private:
         }
     }
 
-    static bool send_all(int fd, const uint8_t* buf, size_t len) {
+    static bool send_all(socket_t fd, const uint8_t* buf, size_t len) {
         size_t sent = 0;
         while (sent < len) {
-            ssize_t n = ::send(fd, buf + sent, len - sent, MSG_NOSIGNAL);
+            size_t chunk_sz = std::min<size_t>(len - sent, 1 << 20);
+#ifdef _WIN32
+            int n = ::send(fd, reinterpret_cast<const char*>(buf + sent), static_cast<int>(chunk_sz), 0);
+#else
+            ssize_t n = ::send(fd, buf + sent, chunk_sz, MSG_NOSIGNAL);
+#endif
             if (n <= 0) return false;
             sent += static_cast<size_t>(n);
         }
         return true;
     }
 
-    void handle_client(int fd) {
+    void handle_client(socket_t fd) {
+#ifdef _WIN32
+        DWORD tv_ms = 30000;
+        ::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&tv_ms), sizeof(tv_ms));
+        ::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const char*>(&tv_ms), sizeof(tv_ms));
+#else
         timeval tv{};
         tv.tv_sec = 30;
         ::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         ::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+#endif
 
         std::vector<uint8_t> raw;
         raw.reserve(8192);
@@ -208,7 +248,11 @@ private:
         size_t content_len = 0;
 
         while (true) {
+#ifdef _WIN32
+            int n = ::recv(fd, reinterpret_cast<char*>(chunk), static_cast<int>(sizeof(chunk)), 0);
+#else
             ssize_t n = ::recv(fd, chunk, sizeof(chunk), 0);
+#endif
             if (n <= 0) break;
             raw.insert(raw.end(), chunk, chunk + n);
 
@@ -233,7 +277,7 @@ private:
                             }
                         }
                     }
-                    if (content_len > 32 * 1024 * 1024) { ::close(fd); return; }
+                    if (content_len > 32 * 1024 * 1024) { close_socket_fd(fd); return; }
                 }
             }
             if (hdr_end != std::string::npos && raw.size() >= hdr_end + content_len) {
@@ -242,7 +286,7 @@ private:
         }
 
         if (hdr_end == std::string::npos) {
-            ::close(fd);
+            close_socket_fd(fd);
             return;
         }
 
@@ -316,7 +360,7 @@ private:
         if (!resp.body.empty()) {
             send_all(fd, resp.body.data(), resp.body.size());
         }
-        ::close(fd);
+        close_socket_fd(fd);
     }
 };
 

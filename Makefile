@@ -9,9 +9,13 @@ SERVER   := $(BIN_DIR)/falcon_server
 CTL      := $(BIN_DIR)/falcon_ctl
 CLI      := $(BIN_DIR)/falcon_models_cli
 
-.PHONY: all clean web
+.PHONY: all clean web win
 
 all: $(SERVER) $(CTL) $(CLI)
+
+win: $(EMBED) cpp_engine/src/main.cpp cpp_engine/include/*.hpp | $(BIN_DIR)
+	x86_64-w64-mingw32-g++-posix -std=c++20 -O3 -fopenmp -static -Icpp_engine/include cpp_engine/src/main.cpp -lz -lws2_32 -lwinhttp -lgdiplus -lshlwapi -lole32 -o $(BIN_DIR)/falcon_server.exe
+	x86_64-w64-mingw32-strip -s $(BIN_DIR)/falcon_server.exe
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)

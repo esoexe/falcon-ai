@@ -77,12 +77,29 @@ async function ensureBackendEngine() {
   fs.mkdirSync(userDataDir, { recursive: true });
 
   const cppBin = locateCppEngineBinary();
+  const starterDir = path.join(__dirname, '..', 'starter_assets');
+  const assetsOut = path.join(userDataDir, 'workspace_assets');
+  const gamesOut = path.join(userDataDir, 'workspace_games');
+  try {
+    fs.mkdirSync(assetsOut, { recursive: true });
+    fs.mkdirSync(gamesOut, { recursive: true });
+    if (fs.existsSync(starterDir) && fs.readdirSync(assetsOut).filter((f) => f.endsWith('.json')).length === 0) {
+      for (const f of fs.readdirSync(starterDir)) {
+        if (f.startsWith('game_')) {
+          fs.copyFileSync(path.join(starterDir, f), path.join(gamesOut, f.replace(/^game_/, '')));
+        } else {
+          fs.copyFileSync(path.join(starterDir, f), path.join(assetsOut, f));
+        }
+      }
+    }
+  } catch {}
+
   if (cppBin) {
     cppDaemon = spawn(cppBin, ['--port', String(port), '--dir', userDataDir], {
       windowsHide: true,
       stdio: 'ignore',
     });
-    const ok = await waitForHttpReady(`http://127.0.0.1:${port}/api/hardware`, 5500);
+    const ok = await waitForHttpReady(`http://127.0.0.1:${port}/api/hardware`, 20000);
     if (ok) {
       backendPort = port;
       return port;
@@ -92,7 +109,6 @@ async function ensureBackendEngine() {
   const webDir = fs.existsSync(path.join(__dirname, '..', 'web_bundle'))
     ? path.join(__dirname, '..', 'web_bundle')
     : path.join(__dirname, '..', '..', 'frontend', 'web_bundle');
-  const starterDir = path.join(__dirname, '..', 'starter_assets');
 
   fallbackHttpServer = await startFallbackServer({
     port,
