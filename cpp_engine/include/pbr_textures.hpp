@@ -183,7 +183,9 @@ inline PBRTextureBundle build_finish_textures(const std::string& finish, float b
     else if (finish == "stylized_handpainted") normal_strength = 1.6f;
     else if (finish == "anime_cel") normal_strength = 0.8f;
     else if (finish == "organic_skin") normal_strength = 1.9f;
-    else if (finish == "woven_fabric") normal_strength = 3.1f;
+    else if (finish == "woven_fabric") normal_strength = 1.4f;
+    else if (finish == "automotive_clearcoat" || finish == "tinted_glass") normal_strength = 0.20f;
+    else if (finish == "satin_plate") normal_strength = 0.55f;
 
     #pragma omp parallel for schedule(static)
     for (int y = 0; y < S; ++y) {
@@ -384,6 +386,26 @@ inline PBRTextureBundle build_finish_textures(const std::string& finish, float b
                 alb = 0.70f + 0.30f * h;
                 rgh = 0.84f;
                 met = 0.03f;
+            } else if (finish == "automotive_clearcoat") {
+                float flake = tile_fbm(u, v, 64, 2, 881u);
+                h = 0.49f + 0.02f * flake;
+                occ = 0.98f;
+                alb = 0.96f + 0.04f * flake;
+                rgh = std::clamp(base_rgh, 0.05f, 0.22f);
+                met = std::clamp(base_met, 0.55f, 0.92f);
+            } else if (finish == "tinted_glass") {
+                h = 0.50f;
+                occ = 1.0f;
+                alb = 0.98f;
+                rgh = 0.04f;
+                met = 0.15f;
+            } else if (finish == "satin_plate") {
+                float polish = tile_fbm(u * 0.5f, v * 0.5f, 16, 2, 887u);
+                h = 0.46f + 0.08f * polish;
+                occ = 0.92f + 0.08f * polish;
+                alb = 0.90f + 0.10f * polish;
+                rgh = std::clamp(base_rgh + 0.06f * (0.5f - polish), 0.12f, 0.48f);
+                met = std::clamp(base_met, 0.72f, 0.98f);
             } else {
                 // Default: forged_metal (anisotropic brushed grain + micro-wear)
                 normal_strength = 2.2f;

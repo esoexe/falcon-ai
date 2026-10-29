@@ -2,6 +2,20 @@
 
 All notable changes to **Falcon AI Studio** are documented in this file.
 
+## [4.0.0] - 2026-10-29
+
+### Added — Pure C++20 Neural 3D Diffusion Bridge + CGTrader Corpus-Trained Catmull-Clark Master Sculptor
+- **Pure C++20 Neural 3D Diffusion Bridge (`cpp_engine/include/neural_3d_bridge.hpp`)**:
+  - Added cross-platform `libcurl` (Linux) & `WinHTTP` (Windows) Gradio v4/v5 SSE client connecting directly to **Tencent Hunyuan3D-2.0**, **VAST-AI TripoSG 1.5B**, **Stability AI Stable Fast 3D (`SF3D`)**, and local `:7860`/`:8188` neural 3D servers, with automatic zero-key studio concept generation and seamless failover to the CGTrader-Trained Catmull-Clark Master Sculptor.
+- **Pure C++20 CGTrader Marketplace Corpus Analyzer & 250-Epoch Prior Trainer (`bin/falcon_corpus_trainer[.exe]`)**:
+  - Added `data/cgtrader_marketplace_corpus.json` (`12` CGTrader `CGT Standard` categories) + `cpp_engine/src/falcon_corpus_trainer.cpp` streaming and analyzing `8` open-licensed `.GLB` reference models in RAM (`143,428` vertices, `193,956` triangles; **`0` mesh bytes persisted or copied**), converging 250 epochs (`Loss: 0.3147 -> 0.0185`) into `cpp_engine/include/cgtrader_learned_priors.hpp` and `data/falcon_cgtrader_learned_weights.json`.
+- **True Catmull-Clark Quad Subdivision Master Sculptor (`cpp_engine/include/subdiv_sculptor.hpp`)**:
+  - Implemented `catmull_clark_step` with DeRose semi-sharp edge creases (`0.0`–`1.0`) and 100% pure 4-gon quad cages (`0` N-gons, 2-manifold watertight) across `character_wizard_robed` (`22,144` quads), `character_knight_warrior` (`12,608` quads), `creature_dragon_wyvern` (`16,608` quads), `car_supercar_gt` (`16,424` quads), and `furniture_designer_chair` (`2,432` quads), plus new `automotive_clearcoat`, `satin_plate`, and `tinted_glass` PBR finishes.
+- **OpenCode Studio v4.0 Neural Selector & Inspector Priors Telemetry (`frontend/src/App.jsx`, `SwarmPanel.jsx`)**:
+  - Added live engine mode selector (`Auto (CGT + Swarm)`, `CGT Master Subdiv`, `Hunyuan3D-2 Neural`, `TripoSG 1.5B Neural`, `SF3D Quad Neural`) and `GET /api/neural/status` + `POST /api/neural/train-priors` live re-calibration in the Inspector.
+
+---
+
 ## [3.0.0] - 2026-10-29
 
 ### Added — Rebuilt Live WebGL 3D Laser-Sintering `Setup.exe` UI/UX

@@ -142,7 +142,7 @@ async function createFalconWindow() {
     height: showSetup ? 680 : 900,
     minWidth: showSetup ? 960 : 980,
     minHeight: showSetup ? 620 : 640,
-    title: showSetup ? 'Falcon AI v3.0 Setup' : 'Falcon AI Studio v3.0',
+    title: showSetup ? 'Falcon AI v4.0 Setup' : 'Falcon AI Studio v4.0',
     frame: false,
     backgroundColor: '#0b0c10',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
@@ -186,7 +186,7 @@ ipcMain.on('falcon:window-close', () => mainWindow?.close());
 ipcMain.handle('falcon:installer-defaults', () => {
   const cpus = os.cpus() || [];
   return {
-    version: '3.0.0',
+    version: '4.0.0',
     platform: process.platform,
     arch: process.arch,
     defaultDir: getDefaultInstallDir(),
@@ -227,7 +227,7 @@ ipcMain.handle('falcon:installer-finish', async (_ev, opts) => {
     mainWindow.setMinimumSize(980, 640);
     mainWindow.setSize(1440, 900, true);
     mainWindow.center();
-    mainWindow.setTitle('Falcon AI Studio v3.0');
+    mainWindow.setTitle('Falcon AI Studio v4.0');
     const mode = opts?.launchMode ? `?launch=${encodeURIComponent(opts.launchMode)}` : '';
     await mainWindow.loadURL(`http://127.0.0.1:${port}/${mode}`);
   }

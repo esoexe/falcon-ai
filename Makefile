@@ -9,16 +9,19 @@ SERVER   := $(BIN_DIR)/falcon_server
 CTL      := $(BIN_DIR)/falcon_ctl
 CLI      := $(BIN_DIR)/falcon_models_cli
 BRIDGE   := $(BIN_DIR)/falcon_dcc_bridge
+TRAINER  := $(BIN_DIR)/falcon_corpus_trainer
 
 .PHONY: all clean web win
 
-all: $(SERVER) $(CTL) $(CLI) $(BRIDGE)
+all: $(SERVER) $(CTL) $(CLI) $(BRIDGE) $(TRAINER)
 
-win: $(EMBED) cpp_engine/src/main.cpp cpp_engine/src/falcon_dcc_bridge.cpp cpp_engine/include/*.hpp | $(BIN_DIR)
+win: $(EMBED) cpp_engine/src/main.cpp cpp_engine/src/falcon_dcc_bridge.cpp cpp_engine/src/falcon_corpus_trainer.cpp cpp_engine/include/*.hpp | $(BIN_DIR)
 	x86_64-w64-mingw32-g++-posix -std=c++20 -O3 -fopenmp -static -Icpp_engine/include cpp_engine/src/main.cpp -lz -lws2_32 -lwinhttp -lgdiplus -lshlwapi -lole32 -o $(BIN_DIR)/falcon_server.exe
 	x86_64-w64-mingw32-strip -s $(BIN_DIR)/falcon_server.exe
 	x86_64-w64-mingw32-g++-posix -std=c++20 -O3 -static cpp_engine/src/falcon_dcc_bridge.cpp -o $(BIN_DIR)/falcon_dcc_bridge.exe
 	x86_64-w64-mingw32-strip -s $(BIN_DIR)/falcon_dcc_bridge.exe
+	x86_64-w64-mingw32-g++-posix -std=c++20 -O3 -static -Icpp_engine/include cpp_engine/src/falcon_corpus_trainer.cpp -lws2_32 -lwinhttp -o $(BIN_DIR)/falcon_corpus_trainer.exe
+	x86_64-w64-mingw32-strip -s $(BIN_DIR)/falcon_corpus_trainer.exe
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -30,7 +33,7 @@ $(EMBED): $(PACKER) frontend/web_bundle/index.html
 	./$(PACKER) frontend/web_bundle $(EMBED)
 
 $(SERVER): cpp_engine/src/main.cpp $(EMBED) cpp_engine/include/*.hpp | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) cpp_engine/src/main.cpp -o $(SERVER) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) cpp_engine/src/main.cpp -o $(SERVER).new $(LDFLAGS) && mv -f $(SERVER).new $(SERVER)
 
 $(CTL): cpp_engine/src/openmesh_ctl.cpp cpp_engine/include/hardware.hpp cpp_engine/include/json.hpp | $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) cpp_engine/src/openmesh_ctl.cpp -o $(CTL) -pthread -lcurl
@@ -40,6 +43,9 @@ $(CLI): cpp_engine/src/models_cli.cpp cpp_engine/include/hardware.hpp cpp_engine
 
 $(BRIDGE): cpp_engine/src/falcon_dcc_bridge.cpp | $(BIN_DIR)
 	$(CXX) -std=c++20 -O3 -Wall -Wextra cpp_engine/src/falcon_dcc_bridge.cpp -o $(BRIDGE) -pthread
+
+$(TRAINER): cpp_engine/src/falcon_corpus_trainer.cpp cpp_engine/include/*.hpp | $(BIN_DIR)
+	$(CXX) -std=c++20 -O3 -Wall -Wextra -Icpp_engine/include cpp_engine/src/falcon_corpus_trainer.cpp -o $(TRAINER) -pthread -lcurl
 
 web:
 	cd frontend && npm run build

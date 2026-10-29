@@ -4,7 +4,7 @@ contextBridge.exposeInMainWorld('falconDesktop', {
   isDesktop: true,
   isElectron: true,
   appName: 'Falcon AI',
-  version: '3.0.0',
+  version: '4.0.0',
   platform: process.platform,
   minimize: () => ipcRenderer.send('falcon:window-minimize'),
   maximize: () => ipcRenderer.send('falcon:window-maximize'),

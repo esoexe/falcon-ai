@@ -338,17 +338,35 @@ export default function App() {
     }
     setStudioMode('model');
     setLoading(true);
-    setLoadingMsg(qMode === 'neural_organic' ? 'Evaluating C++20 SIREN implicit organic field...' : 'Synthesizing 3D geometry & PBR materials...');
+    const neuralModes = ['hunyuan3d', 'triposg', 'sf3d', 'neural_auto', 'local_neural'];
+    setLoadingMsg(
+      neuralModes.includes(qMode)
+        ? `Bridging to ${qMode.toUpperCase()} Neural 3D Diffusion (CGT-Subdiv failover active)...`
+        : qMode === 'neural_organic'
+          ? 'Evaluating C++20 SIREN implicit organic field...'
+          : 'Synthesizing CGT-Standard Catmull-Clark quads & PBR materials...'
+    );
     pushLog('user', q);
     try {
+      const sculptModeMap = {
+        ultra: 'auto',
+        cgt_subdiv: 'cgt_subdiv',
+        hunyuan3d: 'hunyuan3d',
+        triposg: 'triposg',
+        sf3d: 'sf3d',
+        neural_organic: 'neural_organic',
+        csg_swarm: 'csg_swarm',
+        sculpted: 'auto',
+        draft: 'auto',
+      };
       const r = await fetch('/api/generate/text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: q,
           style: 'realistic',
-          sculpt_mode: qMode === 'neural_organic' ? 'neural_organic' : 'auto',
-          ultra_detail: qMode === 'ultra',
+          sculpt_mode: sculptModeMap[qMode] || 'auto',
+          ultra_detail: qMode !== 'draft',
           resolution: qMode === 'draft' ? 68 : gridRes,
         }),
       });
@@ -603,7 +621,7 @@ export default function App() {
   const downloadPluginZip = (engineSlug) => {
     setExportMenuOpen(false);
     window.open(`/api/plugins/${engineSlug}`, '_blank');
-    pushLog('system', `Downloaded official Falcon AI v3.0 ${engineSlug.toUpperCase()} Live-Link plugin (.zip)`);
+    pushLog('system', `Downloaded official Falcon AI v4.0 ${engineSlug.toUpperCase()} Live-Link plugin (.zip)`);
   };
 
   const applyMaterial = async (preset) => {
@@ -1099,7 +1117,7 @@ export default function App() {
             <div className="oc-logo">
               <span className="oc-logo-mark">F</span>
               <span>Falcon</span>
-              <span className="oc-kbd" style={{ fontSize: 10 }}>v3.0</span>
+              <span className="oc-kbd" style={{ fontSize: 10 }}>v4.0</span>
             </div>
             <button
               className="oc-icon-btn oc-no-drag"
@@ -1690,12 +1708,16 @@ export default function App() {
                       className="oc-meta-pill"
                       value={qualityMode}
                       onChange={(e) => setQualityMode(e.target.value)}
-                      title="3D synthesis mode (Ultra Swarm, 4-Draft Grid, Neural Organic SIREN, or Fast Draft)"
+                      title="3D Synthesis Engine: Auto CGT + Swarm, CGT Catmull-Clark Master, Hunyuan3D-2, TripoSG 1.5B, SF3D, 4-Draft Grid, or SIREN Bust"
                     >
-                      <option value="ultra">Ultra Swarm</option>
+                      <option value="ultra">Auto (CGT + Swarm)</option>
+                      <option value="cgt_subdiv">CGT Master Subdiv</option>
+                      <option value="hunyuan3d">Hunyuan3D-2 Neural</option>
+                      <option value="triposg">TripoSG 1.5B Neural</option>
+                      <option value="sf3d">SF3D Quad Neural</option>
                       <option value="draft4">4-Draft Grid</option>
-                      <option value="neural_organic">Neural Organic</option>
-                      <option value="sculpted">Sculpted SDF</option>
+                      <option value="neural_organic">SIREN Organic Bust</option>
+                      <option value="csg_swarm">Hard-Surface CSG</option>
                       <option value="draft">Fast Draft</option>
                     </select>
                   )}
