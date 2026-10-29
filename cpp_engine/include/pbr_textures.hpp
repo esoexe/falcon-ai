@@ -169,28 +169,88 @@ inline std::vector<uint8_t> encode_rgb_png_mem(const std::vector<uint8_t>& rgb, 
     return out;
 }
 
-inline PBRTextureBundle build_finish_textures(const std::string& finish, float base_met, float base_rgh) {
-    constexpr int S = 256;
-    std::vector<float> height_map(S * S, 0.5f);
-    std::vector<uint8_t> albedo(S * S * 3, 240);
-    std::vector<uint8_t> orm(S * S * 3, 255);
-    std::vector<uint8_t> normal(S * S * 3, 128);
+inline PBRTextureBundle build_finish_textures(const std::string& finish, float base_met, float base_rgh, int req_size = 256) {
+    const int S = std::clamp(req_size, 128, 4096);
+    std::vector<float> height_map(static_cast<size_t>(S) * S, 0.5f);
+    std::vector<uint8_t> albedo(static_cast<size_t>(S) * S * 3, 240);
+    std::vector<uint8_t> orm(static_cast<size_t>(S) * S * 3, 255);
+    std::vector<uint8_t> normal(static_cast<size_t>(S) * S * 3, 128);
 
     float normal_strength = 2.8f;
+    if (finish == "dragon_scales") normal_strength = 4.6f;
+    else if (finish == "carbon_fiber" || finish == "carbon_weave") normal_strength = 3.2f;
+    else if (finish == "weathered_stone") normal_strength = 5.0f;
+    else if (finish == "stylized_handpainted") normal_strength = 1.6f;
+    else if (finish == "anime_cel") normal_strength = 0.8f;
+    else if (finish == "organic_skin") normal_strength = 1.9f;
+    else if (finish == "woven_fabric") normal_strength = 3.1f;
 
+    #pragma omp parallel for schedule(static)
     for (int y = 0; y < S; ++y) {
         float v = static_cast<float>(y) / S;
         for (int x = 0; x < S; ++x) {
             float u = static_cast<float>(x) / S;
-            size_t idx = static_cast<size_t>(y * S + x);
+            size_t idx = static_cast<size_t>(y) * S + x;
 
             float h = 0.5f;
+            float alb_r = 0.94f, alb_g = 0.94f, alb_b = 0.94f;
             float alb = 0.94f;
+            bool custom_rgb = false;
             float occ = 1.0f;
             float rgh = base_rgh;
             float met = base_met;
 
-            if (finish == "dragon_scales") {
+            if (finish == "stylized_handpainted") {
+                // Painterly directional brush strokes + warm/cool artistic value variation
+                float stroke1 = tile_fbm(u * 2.5f + 0.08f * std::sin(v * 18.8f), v * 0.65f, 12, 4, 911u);
+                float stroke2 = tile_fbm(u * 0.8f, v * 2.2f, 10, 3, 929u);
+                auto [f1, edge] = tile_worley(u, v, 7, 941u);
+                float bevel_hi = std::clamp(1.0f - edge * 3.2f, 0.0f, 1.0f);
+                h = 0.65f * stroke1 + 0.35f * stroke2;
+                occ = 0.72f + 0.28f * h;
+                custom_rgb = true;
+                alb_r = std::clamp(0.80f + 0.18f * stroke1 + 0.10f * bevel_hi, 0.0f, 1.0f);
+                alb_g = std::clamp(0.78f + 0.19f * h + 0.08f * bevel_hi, 0.0f, 1.0f);
+                alb_b = std::clamp(0.84f + 0.14f * stroke2 + 0.06f * bevel_hi, 0.0f, 1.0f);
+                rgh = std::clamp(0.48f + 0.18f * (1.0f - stroke1), 0.25f, 0.85f);
+                met = std::clamp(base_met * 0.5f, 0.0f, 0.6f);
+            } else if (finish == "anime_cel") {
+                // Clean stepped cel-shaded bands + subtle manga ink hatching on borders
+                float base_n = tile_fbm(u, v, 6, 2, 953u);
+                float quantized = std::floor(base_n * 4.0f) / 3.0f;
+                float gx = std::abs((u * 6.0f - std::floor(u * 6.0f)) - 0.5f);
+                float ink = (gx > 0.485f && base_n < 0.45f) ? 0.32f : 1.0f;
+                h = 0.5f + 0.15f * quantized;
+                occ = 0.88f + 0.12f * quantized;
+                alb = ink * (0.82f + 0.18f * quantized);
+                rgh = 0.62f;
+                met = 0.02f;
+            } else if (finish == "organic_skin") {
+                // Epidermal pore Worley micro-cells + subtle dermal subsurface warmth
+                auto [f1, edge] = tile_worley(u, v, 36, 967u);
+                float pore = std::clamp(f1 * 1.25f, 0.15f, 1.0f);
+                float crease = std::clamp(edge * 4.0f, 0.2f, 1.0f);
+                h = 0.60f * pore + 0.40f * crease;
+                occ = 0.78f + 0.22f * h;
+                custom_rgb = true;
+                alb_r = std::clamp(0.92f + 0.08f * h, 0.0f, 1.0f);
+                alb_g = std::clamp(0.86f + 0.12f * h, 0.0f, 1.0f);
+                alb_b = std::clamp(0.84f + 0.12f * pore, 0.0f, 1.0f);
+                rgh = std::clamp(0.38f + 0.20f * (1.0f - pore), 0.24f, 0.72f);
+                met = 0.0f;
+            } else if (finish == "woven_fabric") {
+                // Fine tailored cloth / tactical weave threads
+                float wu = std::sin(u * 48.0f * 6.2831853f);
+                float wv = std::sin(v * 48.0f * 6.2831853f);
+                bool over = ((static_cast<int>(u * 96.0f) + static_cast<int>(v * 96.0f)) & 1) == 0;
+                float thread = over ? (0.65f + 0.35f * std::abs(wu)) : (0.55f + 0.35f * std::abs(wv));
+                float fold = tile_fbm(u, v, 6, 3, 977u);
+                h = 0.7f * thread + 0.3f * fold;
+                occ = 0.64f + 0.36f * h;
+                alb = 0.76f + 0.24f * h;
+                rgh = 0.84f;
+                met = 0.02f;
+            } else if (finish == "dragon_scales") {
                 normal_strength = 4.6f;
                 // Overlapping staggered diamond/hexagonal scales
                 float su = u * 14.0f;
@@ -338,10 +398,16 @@ inline PBRTextureBundle build_finish_textures(const std::string& finish, float b
             }
 
             height_map[idx] = h;
-            uint8_t a_byte = static_cast<uint8_t>(std::clamp(alb * 255.0f, 0.0f, 255.0f));
-            albedo[idx * 3 + 0] = a_byte;
-            albedo[idx * 3 + 1] = a_byte;
-            albedo[idx * 3 + 2] = a_byte;
+            if (custom_rgb) {
+                albedo[idx * 3 + 0] = static_cast<uint8_t>(std::clamp(alb_r * 255.0f, 0.0f, 255.0f));
+                albedo[idx * 3 + 1] = static_cast<uint8_t>(std::clamp(alb_g * 255.0f, 0.0f, 255.0f));
+                albedo[idx * 3 + 2] = static_cast<uint8_t>(std::clamp(alb_b * 255.0f, 0.0f, 255.0f));
+            } else {
+                uint8_t a_byte = static_cast<uint8_t>(std::clamp(alb * 255.0f, 0.0f, 255.0f));
+                albedo[idx * 3 + 0] = a_byte;
+                albedo[idx * 3 + 1] = a_byte;
+                albedo[idx * 3 + 2] = a_byte;
+            }
 
             orm[idx * 3 + 0] = static_cast<uint8_t>(std::clamp(occ * 255.0f, 0.0f, 255.0f));
             orm[idx * 3 + 1] = static_cast<uint8_t>(std::clamp(rgh * 255.0f, 10.0f, 255.0f));
@@ -353,9 +419,10 @@ inline PBRTextureBundle build_finish_textures(const std::string& finish, float b
     auto h_at = [&](int x, int y) -> float {
         int px = ((x % S) + S) % S;
         int py = ((y % S) + S) % S;
-        return height_map[static_cast<size_t>(py * S + px)];
+        return height_map[static_cast<size_t>(py) * S + px];
     };
 
+    #pragma omp parallel for schedule(static)
     for (int y = 0; y < S; ++y) {
         for (int x = 0; x < S; ++x) {
             float tl = h_at(x - 1, y - 1), tc = h_at(x, y - 1), tr = h_at(x + 1, y - 1);
@@ -371,7 +438,7 @@ inline PBRTextureBundle build_finish_textures(const std::string& finish, float b
             float inv = 1.0f / std::sqrt(nx * nx + ny * ny + nz * nz);
             nx *= inv; ny *= inv; nz *= inv;
 
-            size_t idx = static_cast<size_t>(y * S + x);
+            size_t idx = static_cast<size_t>(y) * S + x;
             normal[idx * 3 + 0] = static_cast<uint8_t>(std::clamp((nx * 0.5f + 0.5f) * 255.0f, 0.0f, 255.0f));
             normal[idx * 3 + 1] = static_cast<uint8_t>(std::clamp((ny * 0.5f + 0.5f) * 255.0f, 0.0f, 255.0f));
             normal[idx * 3 + 2] = static_cast<uint8_t>(std::clamp((nz * 0.5f + 0.5f) * 255.0f, 128.0f, 255.0f));
@@ -387,19 +454,25 @@ inline PBRTextureBundle build_finish_textures(const std::string& finish, float b
 
 } // namespace tex_detail
 
-inline const PBRTextureBundle& get_cached_pbr_textures(const std::string& finish, float metallic, float roughness) {
+inline const PBRTextureBundle& get_cached_pbr_textures(const std::string& finish, float metallic, float roughness, int tex_res = 256) {
     static std::mutex cache_mtx;
     static std::map<std::string, PBRTextureBundle> cache;
 
+    int clamped_res = std::clamp(tex_res, 128, 4096);
     int qm = static_cast<int>(std::round(metallic * 10.0f));
     int qr = static_cast<int>(std::round(roughness * 10.0f));
-    std::string key = finish + "_" + std::to_string(qm) + "_" + std::to_string(qr);
+    std::string key = finish + "_" + std::to_string(qm) + "_" + std::to_string(qr) + "_" + std::to_string(clamped_res);
 
     std::lock_guard<std::mutex> lk(cache_mtx);
     auto it = cache.find(key);
     if (it != cache.end()) return it->second;
 
-    auto inserted = cache.emplace(key, tex_detail::build_finish_textures(finish, metallic, roughness));
+    if (clamped_res > 1024 && cache.size() > 8) {
+        // Keep RAM lean when baking 2K / 4K maps
+        cache.clear();
+    }
+
+    auto inserted = cache.emplace(key, tex_detail::build_finish_textures(finish, metallic, roughness, clamped_res));
     return inserted.first->second;
 }
 

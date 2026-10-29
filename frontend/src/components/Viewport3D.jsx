@@ -49,6 +49,8 @@ export default function Viewport3D({
   autoRotate = false,
   selectedPartId = null,
   onSelectPart,
+  regionBrushActive = false,
+  onPaintRegionPoint = null,
   rigData = null,
   showRig = false,
   activeAnimation = 'rest',
@@ -56,12 +58,16 @@ export default function Viewport3D({
   theme = 'dark',
 }) {
   const mountRef = useRef(null);
+  const brushRef = useRef({ active: false, cb: null });
+  brushRef.current = { active: regionBrushActive, cb: onPaintRegionPoint };
   const stateRef = useRef({
     scene: null,
     camera: null,
     renderer: null,
     controls: null,
     modelRoot: null,
+    mixer: null,
+    gltfClips: [],
     wireOverlayGroup: null,
     rigGroup: null,
     gridHelper: null,
@@ -188,9 +194,16 @@ export default function Viewport3D({
       raycaster.setFromCamera(pointer, camera);
       const hits = raycaster.intersectObjects(st.modelRoot.children, true);
       if (hits.length > 0) {
-        let obj = hits[0].object;
-        const partName = obj.name || (obj.parent && obj.parent.name) || null;
-        onSelectPart(partName);
+        if (brushRef.current.active && brushRef.current.cb) {
+          const hp = hits[0].point;
+          brushRef.current.cb([hp.x, hp.y, hp.z]);
+          return;
+        }
+        if (onSelectPart) {
+          let obj = hits[0].object;
+          const partName = obj.name || (obj.parent && obj.parent.name) || null;
+          onSelectPart(partName);
+        }
       }
     };
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
@@ -212,10 +225,13 @@ export default function Viewport3D({
     const clock = new THREE.Clock();
     const animate = () => {
       rafId = requestAnimationFrame(animate);
-      const t = clock.getElapsedTime();
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const t = clock.elapsedTime;
       const mode = st.animMode;
 
-      if (st.modelRoot) {
+      if (st.mixer && st.gltfClips && st.gltfClips.length > 0 && mode !== 'rest') {
+        st.mixer.update(dt);
+      } else if (st.modelRoot) {
         // Reset base transforms before applying procedural clip
         st.modelRoot.position.set(0, 0, 0);
         st.modelRoot.rotation.set(0, 0, 0);
@@ -314,6 +330,18 @@ export default function Viewport3D({
 
         st.modelRoot.add(root);
 
+        // Bind Khronos glTF 2.0 Skeletal AnimationMixer if rigged clips are embedded!
+        st.mixer = null;
+        st.gltfClips = gltf.animations || [];
+        if (st.gltfClips.length > 0) {
+          st.mixer = new THREE.AnimationMixer(root);
+          const match = st.gltfClips.find((c) => c.name && c.name.startsWith(st.animMode)) || st.gltfClips[0];
+          if (match) {
+            const act = st.mixer.clipAction(match);
+            act.play();
+          }
+        }
+
         // Fit camera smoothly to bounding box
         const box = new THREE.Box3().setFromObject(root);
         if (!box.isEmpty()) {
@@ -361,6 +389,13 @@ export default function Viewport3D({
     if (st.gridHelper) st.gridHelper.visible = showGrid;
     if (st.controls) st.controls.autoRotate = autoRotate;
     st.animMode = activeAnimation;
+    if (st.mixer && st.gltfClips && st.gltfClips.length > 0 && activeAnimation !== 'rest') {
+      const match = st.gltfClips.find((c) => c.name && c.name.startsWith(activeAnimation)) || st.gltfClips[0];
+      if (match) {
+        st.mixer.stopAllAction();
+        st.mixer.clipAction(match).reset().play();
+      }
+    }
   }, [lightingPreset, showGrid, autoRotate, activeAnimation]);
 
   // Build 3D Bone & Joint Overlay when rigData or showRig changes

@@ -1,8 +1,8 @@
 {
   "name": "falcon-ai-desktop",
   "productName": "Falcon AI",
-  "version": "2.1.0",
-  "description": "Falcon AI — Open-Source C++20 3D Model Swarm, CAD Slicer & Playable 60-FPS 3D Game Studio",
+  "version": "3.0.0",
+  "description": "Falcon AI v3.0 — Open-Source C++20 3D Studio (Quad Remesh, 4K PBR, Multi-View, 24-Clip Rig, FBX/USDZ, 3D Games & Engine Plugins)",
   "author": "Falcon AI Open Source",
   "license": "MIT",
   "main": "electron/main.js",
@@ -34,7 +34,7 @@
         {
           "from": "../bin",
           "to": "bin",
-          "filter": ["falcon_server.exe"]
+          "filter": ["falcon_server.exe", "falcon_dcc_bridge.exe"]
         }
       ],
       "target": [

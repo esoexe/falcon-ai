@@ -8,6 +8,7 @@
 #include "agent_swarm.hpp"
 #include "embedded_web.hpp"
 #include "exporters.hpp"
+#include "exporters_pro.hpp"
 #include "game_engine_builder.hpp"
 #include "hardware.hpp"
 #include "http_server.hpp"
@@ -15,8 +16,13 @@
 #include "json.hpp"
 #include "llm_router.hpp"
 #include "mesh.hpp"
+#include "mesh_importer.hpp"
+#include "multiview_3d.hpp"
+#include "neural_organic.hpp"
 #include "provider_catalog.hpp"
+#include "rig_animator.hpp"
 #include "sdf_compiler.hpp"
+#include "smart_remesh.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -94,6 +100,9 @@ std::string guess_mime(const fs::path& p) {
     if (ext == ".png") return "image/png";
     if (ext == ".jpg" || ext == ".jpeg") return "image/jpeg";
     if (ext == ".glb") return "model/gltf-binary";
+    if (ext == ".fbx") return "application/octet-stream";
+    if (ext == ".usdz") return "model/vnd.usdz+zip";
+    if (ext == ".3mf") return "application/vnd.ms-package.3dmanufacturing-3dmodel+xml";
     if (ext == ".json") return "application/json; charset=utf-8";
     return "application/octet-stream";
 }
@@ -140,8 +149,17 @@ JsonValue save_scene_asset(
             pm["color"] = m.material.color_hex;
             pm["metallic"] = m.material.metallic;
             pm["roughness"] = m.material.roughness;
+            pm["finish"] = m.material.finish;
+            pm["tex_resolution"] = m.material.tex_resolution;
             parts_meta.push_back(pm);
         }
+    }
+
+    int max_tex_res = 256;
+    size_t total_quads = 0;
+    for (const auto& m : scene.parts) {
+        max_tex_res = std::max(max_tex_res, m.material.tex_resolution);
+        total_quads += m.quads.size();
     }
 
     std::string unity_cs = generate_unity_csharp_script(blueprint, title);
@@ -157,6 +175,9 @@ JsonValue save_scene_asset(
     rec["glb_url"] = "/exports/" + aid + ".glb?t=" + std::to_string(now_epoch_ms());
     rec["file_size_kb"] = std::round((static_cast<double>(glb.size()) / 1024.0) * 10.0) / 10.0;
     rec["telemetry"] = telemetry;
+    rec["tex_resolution"] = max_tex_res;
+    rec["quad_mode"] = (total_quads > 0);
+    rec["quad_count"] = static_cast<int64_t>(total_quads);
     rec["parts"] = parts_meta;
     rec["blueprint"] = blueprint.is_object() ? blueprint : JsonValue(nullptr);
     rec["unity_csharp_script"] = unity_cs;
@@ -175,6 +196,14 @@ std::pair<Scene3D, JsonValue> load_scene_asset(const fs::path& assets_dir, const
     }
     JsonValue meta = JsonValue::parse(read_text_file(meta_p));
     Scene3D sc = load_glb_bytes(read_binary_file(glb_p));
+    int saved_tex = meta.get_int("tex_resolution", 256);
+    bool is_quad = meta.get_bool("quad_mode", false);
+    for (auto& m : sc.parts) {
+        m.material.tex_resolution = std::clamp(saved_tex, 128, 4096);
+        if (is_quad && m.quads.empty() && m.faces.size() >= 2) {
+            qem_detail::extract_quad_dominant_topology(m, 1);
+        }
+    }
     return {std::move(sc), std::move(meta)};
 }
 
@@ -343,13 +372,15 @@ int main(int argc, char** argv) {
             return HttpResponse::bytes(read_binary_file(setup_html), "text/html; charset=utf-8");
         }
         if (segs.size() == 2 && segs[0] == "download" && (segs[1] == "falcon.exe" || segs[1] == "setup.exe")) {
-            fs::path exe_p = base_dir / "releases" / "Falcon-AI-Setup-2.1.0-x64.exe";
+            fs::path exe_p = base_dir / "releases" / "Falcon-AI-Setup-3.0.0-x64.exe";
+            if (!fs::exists(exe_p)) exe_p = base_dir / "releases" / "Falcon-AI-Setup-2.1.0-x64.exe";
             if (!fs::exists(exe_p)) exe_p = base_dir / "releases" / "Falcon-AI-Setup-2.0.0-x64.exe";
             if (!fs::exists(exe_p)) return HttpResponse::json("{\"error\":\"Setup.exe not found\"}", 404);
             return HttpResponse::bytes(read_binary_file(exe_p), "application/vnd.microsoft.portable-executable", exe_p.filename().string());
         }
         if (segs.size() == 2 && segs[0] == "download" && segs[1] == "source.zip") {
-            fs::path zip_p = base_dir / "releases" / "Falcon-AI-2.1.0-Source-Code.zip";
+            fs::path zip_p = base_dir / "releases" / "Falcon-AI-3.0.0-Source-Code.zip";
+            if (!fs::exists(zip_p)) zip_p = base_dir / "releases" / "Falcon-AI-2.1.0-Source-Code.zip";
             if (!fs::exists(zip_p)) zip_p = base_dir / "releases" / "Falcon-AI-2.0.0-Source-Code.zip";
             if (!fs::exists(zip_p)) return HttpResponse::json("{\"error\":\"Source archive not found\"}", 404);
             return HttpResponse::bytes(read_binary_file(zip_p), "application/zip", zip_p.filename().string());
@@ -435,9 +466,90 @@ int main(int argc, char** argv) {
                 }
                 if (req.method == "DELETE") {
                     fs::remove(assets_dir / (aid + ".glb"));
+                    fs::remove(assets_dir / (aid + "_rigged.glb"));
+                    fs::remove(assets_dir / (aid + ".3mf"));
                     fs::remove(assets_dir / (aid + ".json"));
                     return HttpResponse::json("{\"deleted\":true}");
                 }
+            }
+
+            // POST /api/assets/import — Import External .GLB / .OBJ / .STL / .PLY for Retexturing, Quad Remesh & Rigging!
+            if (segs.size() == 3 && segs[1] == "assets" && segs[2] == "import" && req.method == "POST") {
+                auto mp = req.parse_multipart();
+                if (mp.find("file") == mp.end() || mp["file"].data.empty()) {
+                    return HttpResponse::json("{\"error\":\"Missing mesh file (.glb, .obj, .stl, .ply)\"}", 400);
+                }
+                auto t0 = now_epoch_ms();
+                std::string fname = mp["file"].filename.empty() ? "imported_mesh.obj" : mp["file"].filename;
+                Scene3D sc = import_external_mesh_bytes(mp["file"].data, fname);
+                std::string stem = fs::path(fname).stem().string();
+                std::string ext  = to_lower_str(fs::path(fname).extension().string());
+                JsonValue rec = save_scene_asset(
+                    assets_dir,
+                    sc,
+                    "Imported: " + stem,
+                    "Imported external " + ext + " mesh (" + fname + ")",
+                    "mesh-import",
+                    "Falcon v3.0 C++20 Mesh Importer (" + ext + ")",
+                    JsonValue(nullptr),
+                    now_epoch_ms() - t0
+                );
+                return HttpResponse::json(rec.dump(0));
+            }
+
+            // GET /api/animations — 24-Clip Categorized Motion Preset Library
+            if (segs.size() == 2 && segs[1] == "animations" && req.method == "GET") {
+                JsonValue arr = JsonValue::array();
+                for (const auto& c : get_motion_library_catalog()) {
+                    arr.push_back(JsonValue::object({
+                        {"id", c.id},
+                        {"name", c.name},
+                        {"category", c.category},
+                        {"duration_sec", c.duration_sec},
+                        {"keyframes", c.keyframes}
+                    }));
+                }
+                return HttpResponse::json(arr.dump(0));
+            }
+
+            // GET /api/slicer-links/{id} — 1-Click Direct Desktop Slicer Protocol Launchers
+            if (segs.size() == 3 && segs[1] == "slicer-links" && req.method == "GET") {
+                std::string aid = fs::path(segs[2]).filename().string();
+                auto [sc, meta] = load_scene_asset(assets_dir, aid);
+                fs::path mf_path = assets_dir / (aid + ".3mf");
+                write_binary_file(mf_path, export_3mf_bytes(sc, meta.get_str("title", "FalconPrint")));
+                std::string http_url = "http://127.0.0.1:" + std::to_string(port) + "/exports/" + aid + ".3mf";
+                return HttpResponse::json(build_slicer_launch_uris(http_url).dump(0));
+            }
+
+            // GET /api/plugins/{engine} — Official Zero-Python Live-Link Plugin Bundles (.zip)
+            if (segs.size() == 3 && segs[1] == "plugins" && req.method == "GET") {
+                std::string eng = to_lower_str(segs[2]);
+                std::vector<std::pair<std::string, std::string>> files;
+                fs::path pdir = base_dir / "plugins";
+                auto add_if_exists = [&](const std::string& arc_name, const fs::path& disk_p) {
+                    if (fs::exists(disk_p)) files.push_back({arc_name, read_text_file(disk_p)});
+                };
+                if (eng == "unity") {
+                    add_if_exists("FalconAI_Unity/Editor/FalconAILiveLink.cs", pdir / "unity" / "FalconAILiveLink.cs");
+                } else if (eng == "unreal") {
+                    add_if_exists("FalconAI_UE5/Public/FalconAILiveLink.h", pdir / "unreal" / "FalconAILiveLink.h");
+                    add_if_exists("FalconAI_UE5/Private/FalconAILiveLink.cpp", pdir / "unreal" / "FalconAILiveLink.cpp");
+                } else if (eng == "godot") {
+                    add_if_exists("addons/falcon_ai/plugin.cfg", pdir / "godot" / "plugin.cfg");
+                    add_if_exists("addons/falcon_ai/falcon_ai_dock.gd", pdir / "godot" / "falcon_ai_dock.gd");
+                } else if (eng == "roblox") {
+                    add_if_exists("FalconAI_Roblox/FalconAILiveLink.lua", pdir / "roblox" / "FalconAILiveLink.lua");
+                } else if (eng == "blender" || eng == "dcc-bridge") {
+                    add_if_exists("FalconAI_DCC_Bridge/falcon_dcc_bridge.cpp", base_dir / "cpp_engine" / "src" / "falcon_dcc_bridge.cpp");
+                    if (fs::exists(base_dir / "bin" / "falcon_dcc_bridge")) {
+                        add_if_exists("FalconAI_DCC_Bridge/bin/falcon_dcc_bridge", base_dir / "bin" / "falcon_dcc_bridge");
+                    }
+                } else {
+                    return HttpResponse::json("{\"error\":\"Unknown plugin engine\"}", 404);
+                }
+                auto zbytes = zip_util::build_zip(files);
+                return HttpResponse::bytes(std::move(zbytes), "application/zip", "FalconAI_v3_" + eng + "_Plugin.zip");
             }
 
             // POST /api/prompt/enhance
@@ -451,13 +563,105 @@ int main(int argc, char** argv) {
                 return HttpResponse::json(out.dump(0));
             }
 
+            // POST /api/generate/draft-grid — Meshy-Style 4-Candidate Fast Draft Preview Grid
+            if (segs.size() == 3 && segs[1] == "generate" && segs[2] == "draft-grid" && req.method == "POST") {
+                JsonValue body = JsonValue::parse(req.body_str());
+                std::string prompt = body.get_str("prompt", "Armored sci-fi cyber knight");
+                RouterConfig cfg_copy;
+                {
+                    std::lock_guard<std::mutex> lk(g_state_mutex);
+                    cfg_copy = g_router_cfg;
+                }
+                auto t0 = now_epoch_ms();
+                auto drafts = generate_four_draft_candidates(cfg_copy, prompt, 62);
+                JsonValue cands = JsonValue::array();
+                for (size_t i = 0; i < drafts.size(); ++i) {
+                    JsonValue rec = save_scene_asset(
+                        assets_dir,
+                        drafts[i].scene,
+                        drafts[i].blueprint.get_str("title", "Draft") + " (" + drafts[i].style_tag + ")",
+                        prompt,
+                        "draft-candidate",
+                        drafts[i].variant_label,
+                        drafts[i].blueprint,
+                        (now_epoch_ms() - t0) / 4
+                    );
+                    rec["variant_label"] = drafts[i].variant_label;
+                    rec["style_tag"] = drafts[i].style_tag;
+                    cands.push_back(std::move(rec));
+                }
+                JsonValue out = JsonValue::object({
+                    {"prompt", prompt},
+                    {"total_ms", now_epoch_ms() - t0},
+                    {"candidates", cands}
+                });
+                return HttpResponse::json(out.dump(0));
+            }
+
+            // POST /api/generate/multiview — 1 to 4 View Space-Carving + Monocular Depth + Photo RGB Projection
+            if (segs.size() == 3 && segs[1] == "generate" && segs[2] == "multiview" && req.method == "POST") {
+                auto mp = req.parse_multipart();
+                std::vector<uint8_t> front_b = mp.count("front") ? mp["front"].data : (mp.count("file") ? mp["file"].data : std::vector<uint8_t>{});
+                std::vector<uint8_t> side_b  = mp.count("side")  ? mp["side"].data  : std::vector<uint8_t>{};
+                std::vector<uint8_t> back_b  = mp.count("back")  ? mp["back"].data  : std::vector<uint8_t>{};
+                std::vector<uint8_t> top_b   = mp.count("top")   ? mp["top"].data   : std::vector<uint8_t>{};
+                if (front_b.empty() && side_b.empty()) {
+                    return HttpResponse::json("{\"error\":\"Upload at least a Front reference image\"}", 400);
+                }
+                int res = mp.count("resolution") ? std::stoi(mp["resolution"].as_string()) : 96;
+                float inf = mp.count("depth_inflation") ? std::stof(mp["depth_inflation"].as_string()) : 0.68f;
+
+                int view_cnt = (!front_b.empty() ? 1 : 0) + (!side_b.empty() ? 1 : 0) + (!back_b.empty() ? 1 : 0) + (!top_b.empty() ? 1 : 0);
+                auto t0 = now_epoch_ms();
+                Scene3D sc = reconstruct_multiview_to_3d_cpp(front_b, side_b, back_b, top_b, res, inf);
+                auto ms = now_epoch_ms() - t0;
+
+                JsonValue rec = save_scene_asset(
+                    assets_dir,
+                    sc,
+                    "Multi-View 3D (" + std::to_string(view_cnt) + "-View Photo Mesh)",
+                    std::to_string(view_cnt) + "-View Visual Hull + Photo RGB Projection",
+                    "multiview-to-3d",
+                    "Falcon v3.0 Multi-View Space Carver (" + std::to_string(view_cnt) + " views)",
+                    JsonValue(nullptr),
+                    ms
+                );
+                return HttpResponse::json(rec.dump(0));
+            }
+
             // POST /api/generate/text
             if (segs.size() == 3 && segs[1] == "generate" && segs[2] == "text" && req.method == "POST") {
                 JsonValue body = JsonValue::parse(req.body_str());
                 std::string prompt = body.get_str("prompt", "");
                 std::string style = body.get_str("style", "realistic");
+                std::string sculpt_mode = body.get_str("sculpt_mode", "auto");
                 int res = body.get_int("resolution", default_grid);
                 bool ultra_detail = body.get_bool("ultra_detail", true);
+
+                std::string plow = to_lower_str(prompt);
+                bool wants_bust = (plow.find("bust") != std::string::npos || plow.find("head sculpt") != std::string::npos || plow.find("portrait statue") != std::string::npos);
+                if (sculpt_mode == "neural_organic" || wants_bust) {
+                    auto t0 = now_epoch_ms();
+                    bool horned = (plow.find("horn") != std::string::npos || plow.find("demon") != std::string::npos || plow.find("oni") != std::string::npos);
+                    bool winged = (plow.find("wing") != std::string::npos || plow.find("angel") != std::string::npos);
+                    std::string omode = wants_bust ? (horned ? "horned_bust" : "bust") : (winged ? "winged_hero" : (horned ? "creature" : "humanoid"));
+                    std::string fin = (plow.find("marble") != std::string::npos) ? "marble_veined"
+                                    : (plow.find("bronze") != std::string::npos) ? "oxidized_bronze"
+                                    : (plow.find("gold") != std::string::npos)   ? "anodized_gold"
+                                    : "organic_skin";
+                    std::string hex = (fin == "marble_veined") ? "#e8e6e1" : (fin == "oxidized_bronze" ? "#7c6244" : (fin == "anodized_gold" ? "#eab308" : "#d6b49c"));
+                    Scene3D sc = synthesize_neural_organic_scene(omode, std::max(res, 96), fin, hex);
+                    JsonValue trace = JsonValue::array({
+                        mk_agent_trace("@neural-siren", "Implicit Anatomical Field", "Evaluated C^2 smooth-metaball + SIREN micro-displacement grid.", now_epoch_ms() - t0)
+                    });
+                    JsonValue rec = save_scene_asset(
+                        assets_dir, sc,
+                        wants_bust ? "Sculpted Anatomical Bust" : "Sculpted Organic Character",
+                        prompt, "neural-organic-3d", "Falcon v3.0 SIREN Implicit Organic Sculptor",
+                        JsonValue(nullptr), now_epoch_ms() - t0, "", generate_auto_rig_json(sc, "biped"), trace
+                    );
+                    return HttpResponse::json(rec.dump(0));
+                }
 
                 RouterConfig cfg_copy;
                 {
@@ -879,6 +1083,100 @@ int main(int argc, char** argv) {
                     return HttpResponse::json(rec.dump(0));
                 }
 
+                if (op == "smart-remesh") {
+                    size_t target_faces = static_cast<size_t>(std::clamp(body.get_int("target_faces", 8000), 100, 300000));
+                    bool quad_mode = body.get_bool("quad_mode", true);
+                    bool preserve_creases = body.get_bool("preserve_creases", true);
+                    int tex_res = body.get_int("tex_resolution", meta.get_int("tex_resolution", 256));
+
+                    SmartRemeshStats st = smart_remesh_scene(sc, target_faces, quad_mode, preserve_creases);
+                    JsonValue rep = JsonValue::object({
+                        {"input_triangles", static_cast<int64_t>(st.input_tris)},
+                        {"final_triangles", static_cast<int64_t>(st.output_tris)},
+                        {"quad_count", static_cast<int64_t>(st.output_quads)},
+                        {"final_polygons", static_cast<int64_t>(st.output_polygons)},
+                        {"quad_mode", quad_mode},
+                        {"target_faces", static_cast<int64_t>(target_faces)}
+                    });
+                    for (auto& m : sc.parts) {
+                        m.material.tex_resolution = std::clamp(tex_res, 128, 4096);
+                    }
+                    std::string badge = quad_mode
+                        ? ("C++20 Garland-Heckbert QEM + Quad Remesh (" + std::to_string(rep.get_int("quad_count", 0)) + " quads)")
+                        : ("C++20 Garland-Heckbert QEM (" + std::to_string(rep.get_int("final_triangles", 0)) + " tris)");
+                    JsonValue rec = save_scene_asset(assets_dir, sc, meta.get_str("title"), meta.get_str("prompt"),
+                        meta.get_str("source_mode"), badge,
+                        JsonValue(nullptr), now_epoch_ms() - t0, aid, meta.at_or_null("rig"));
+                    rec["remesh_report"] = rep;
+                    write_text_file(assets_dir / (aid + ".json"), rec.dump(2));
+                    return HttpResponse::json(rec.dump(0));
+                }
+
+                if (op == "ai-texture") {
+                    std::string tprompt = to_lower_str(body.get_str("prompt", "brushed titanium"));
+                    int tex_res = std::clamp(body.get_int("tex_resolution", 2048), 256, 4096);
+                    std::string fin = "brushed_titanium";
+                    std::string col = "#cbd5e1";
+                    float met = 0.78f, rgh = 0.28f;
+
+                    if (tprompt.find("gold") != std::string::npos || tprompt.find("brass") != std::string::npos) {
+                        fin = "anodized_gold"; col = "#eab308"; met = 0.92f; rgh = 0.20f;
+                    } else if (tprompt.find("carbon") != std::string::npos || tprompt.find("stealth") != std::string::npos) {
+                        fin = "carbon_fiber"; col = "#1e293b"; met = 0.35f; rgh = 0.26f;
+                    } else if (tprompt.find("damascus") != std::string::npos || tprompt.find("forged") != std::string::npos) {
+                        fin = "damascus_steel"; col = "#cbd5e1"; met = 0.90f; rgh = 0.22f;
+                    } else if (tprompt.find("anime") != std::string::npos || tprompt.find("cel") != std::string::npos || tprompt.find("toon") != std::string::npos) {
+                        fin = "anime_cel"; col = "#38bdf8"; met = 0.05f; rgh = 0.65f;
+                    } else if (tprompt.find("stylized") != std::string::npos || tprompt.find("hand") != std::string::npos || tprompt.find("fantasy") != std::string::npos) {
+                        fin = "stylized_handpainted"; col = "#60a5fa"; met = 0.18f; rgh = 0.48f;
+                    } else if (tprompt.find("skin") != std::string::npos || tprompt.find("flesh") != std::string::npos || tprompt.find("organic") != std::string::npos) {
+                        fin = "organic_skin"; col = "#d6b49c"; met = 0.04f; rgh = 0.44f;
+                    } else if (tprompt.find("cloth") != std::string::npos || tprompt.find("fabric") != std::string::npos || tprompt.find("leather") != std::string::npos) {
+                        fin = "woven_fabric"; col = "#7c2d12"; met = 0.06f; rgh = 0.72f;
+                    } else if (tprompt.find("marble") != std::string::npos || tprompt.find("stone") != std::string::npos) {
+                        fin = "marble_veined"; col = "#f1f5f9"; met = 0.08f; rgh = 0.24f;
+                    } else if (tprompt.find("wood") != std::string::npos || tprompt.find("oak") != std::string::npos) {
+                        fin = "carved_wood"; col = "#92400e"; met = 0.05f; rgh = 0.62f;
+                    } else if (tprompt.find("crimson") != std::string::npos || tprompt.find("red") != std::string::npos) {
+                        fin = "painted_armor"; col = "#dc2626"; met = 0.65f; rgh = 0.22f;
+                    } else if (tprompt.find("emerald") != std::string::npos || tprompt.find("jade") != std::string::npos) {
+                        fin = "dragon_scales"; col = "#10b981"; met = 0.42f; rgh = 0.30f;
+                    }
+
+                    for (auto& m : sc.parts) {
+                        m.colors.clear();
+                        m.material.finish = fin;
+                        m.material.color_hex = col;
+                        m.material.metallic = met;
+                        m.material.roughness = rgh;
+                        m.material.tex_resolution = tex_res;
+                    }
+                    JsonValue rec = save_scene_asset(assets_dir, sc, meta.get_str("title"), meta.get_str("prompt"),
+                        meta.get_str("source_mode"), "Falcon HD PBR Baker (" + std::to_string(tex_res) + "px · " + fin + ")",
+                        meta.at_or_null("blueprint"), now_epoch_ms() - t0, aid, meta.at_or_null("rig"));
+                    return HttpResponse::json(rec.dump(0));
+                }
+
+                if (op == "paint-region") {
+                    Vec3 center{0.0f, 0.5f, 0.0f};
+                    if (body.has("center") && body["center"].is_array() && body["center"].size() >= 3) {
+                        center.x = static_cast<float>(body["center"][0].as_num());
+                        center.y = static_cast<float>(body["center"][1].as_num());
+                        center.z = static_cast<float>(body["center"][2].as_num());
+                    }
+                    float radius = static_cast<float>(body.get_num("radius", 0.35));
+                    std::string col = body.get_str("color", "#38bdf8");
+                    float feather = static_cast<float>(body.get_num("feather", 0.40));
+                    std::string pid = body.get_str("part_id", "");
+
+                    size_t painted = paint_mesh_region_3d(sc, center, radius, col, feather, pid);
+                    JsonValue rec = save_scene_asset(assets_dir, sc, meta.get_str("title"), meta.get_str("prompt"),
+                        meta.get_str("source_mode"), "C++20 3D Region Brush (" + std::to_string(painted) + " verts healed)",
+                        meta.at_or_null("blueprint"), now_epoch_ms() - t0, aid, meta.at_or_null("rig"));
+                    rec["painted_vertices"] = static_cast<int64_t>(painted);
+                    return HttpResponse::json(rec.dump(0));
+                }
+
                 if (op == "material") {
                     std::string col = body.get_str("color", "#94a3b8");
                     float met = static_cast<float>(body.get_num("metallic", 0.5));
@@ -887,6 +1185,7 @@ int main(int argc, char** argv) {
                     float estr = static_cast<float>(body.get_num("emissive_strength", 0.0));
                     std::string fin = body.get_str("finish", "");
                     std::string pid = body.get_str("part_id", "");
+                    int tex_res = std::clamp(body.get_int("tex_resolution", meta.get_int("tex_resolution", 256)), 128, 4096);
 
                     for (auto& m : sc.parts) {
                         if (!pid.empty() && m.id != pid) continue;
@@ -896,6 +1195,7 @@ int main(int argc, char** argv) {
                         m.material.roughness = rgh;
                         m.material.emissive_hex = emit;
                         m.material.emissive_strength = estr;
+                        m.material.tex_resolution = tex_res;
                         if (!fin.empty()) m.material.finish = fin;
                     }
                     JsonValue bp = meta.at_or_null("blueprint");
@@ -913,14 +1213,31 @@ int main(int argc, char** argv) {
                         }
                     }
                     JsonValue rec = save_scene_asset(assets_dir, sc, meta.get_str("title"), meta.get_str("prompt"),
-                        meta.get_str("source_mode"), "C++20 PBR Texture & Material Baker",
+                        meta.get_str("source_mode"), "C++20 PBR Baker (" + std::to_string(tex_res) + "px)",
                         bp, now_epoch_ms() - t0, aid, meta.at_or_null("rig"));
                     return HttpResponse::json(rec.dump(0));
                 }
 
                 if (op == "rig") {
-                    std::string rtype = body.get_str("rig_type", "biped");
-                    meta["rig"] = generate_auto_rig_json(sc, rtype);
+                    std::string rtype = body.get_str("rig_type", "auto");
+                    std::string clip_id = body.get_str("clip_id", "walk_standard");
+                    bool bake_skin = body.get_bool("bake_skin", true);
+
+                    RiggedSkinData skin = compute_volumetric_skin_weights(sc, rtype);
+                    JsonValue rig_meta = generate_auto_rig_json(sc, skin.rig_type == "vehicle" ? "biped" : skin.rig_type);
+                    rig_meta["rig_type"] = skin.rig_type;
+                    rig_meta["bone_count"] = static_cast<int64_t>(skin.bones.size());
+                    rig_meta["active_clip"] = clip_id;
+                    rig_meta["skinned_glb_ready"] = bake_skin;
+                    rig_meta["motion_clips_embedded"] = static_cast<int64_t>(get_motion_library_catalog().size());
+
+                    if (bake_skin) {
+                        std::vector<uint8_t> rigged_glb = export_rigged_animated_glb_bytes(sc, skin.rig_type, clip_id, true);
+                        write_binary_file(assets_dir / (aid + "_rigged.glb"), rigged_glb);
+                        meta["glb_url"] = "/exports/" + aid + "_rigged.glb?t=" + std::to_string(now_epoch_ms());
+                        meta["engine_used"] = "Falcon Auto-Rigger (" + std::to_string(skin.bones.size()) + " bones · 24 Motion Clips)";
+                    }
+                    meta["rig"] = rig_meta;
                     write_text_file(assets_dir / (aid + ".json"), meta.dump(2));
                     return HttpResponse::json(meta.dump(0));
                 }
@@ -931,15 +1248,35 @@ int main(int argc, char** argv) {
                 std::string aid = fs::path(segs[2]).filename().string();
                 std::string fmt = to_lower_str(segs[3]);
                 auto [sc, meta] = load_scene_asset(assets_dir, aid);
-                std::string title = meta.get_str("title", "OpenMesh_Asset");
+                std::string title = meta.get_str("title", "Falcon_Asset");
                 std::string slug;
                 for (char c : title) {
                     slug.push_back(std::isalnum(static_cast<unsigned char>(c)) ? c : '_');
                 }
                 if (slug.empty()) slug = aid;
 
+                bool wants_rigged = (req.query.find("rigged=1") != std::string::npos) ||
+                                    (meta.has("rig") && meta["rig"].is_object() && meta["rig"].get_bool("skinned_glb_ready", false));
+                std::string active_clip = (meta.has("rig") && meta["rig"].is_object())
+                    ? meta["rig"].get_str("active_clip", "walk_standard") : "walk_standard";
+                std::string rtype = (meta.has("rig") && meta["rig"].is_object())
+                    ? meta["rig"].get_str("rig_type", "auto") : "auto";
+
                 if (fmt == "glb") {
+                    fs::path rpath = assets_dir / (aid + "_rigged.glb");
+                    if (wants_rigged && fs::exists(rpath)) {
+                        return HttpResponse::bytes(read_binary_file(rpath), "model/gltf-binary", slug + "_Rigged24Clips.glb");
+                    }
+                    if (req.query.find("rigged=1") != std::string::npos) {
+                        return HttpResponse::bytes(export_rigged_animated_glb_bytes(sc, rtype, active_clip, true), "model/gltf-binary", slug + "_Rigged24Clips.glb");
+                    }
                     return HttpResponse::bytes(read_binary_file(assets_dir / (aid + ".glb")), "model/gltf-binary", slug + ".glb");
+                }
+                if (fmt == "fbx") {
+                    return HttpResponse::bytes(export_fbx_bytes(sc, wants_rigged, rtype, active_clip), "application/octet-stream", slug + ".fbx");
+                }
+                if (fmt == "usdz") {
+                    return HttpResponse::bytes(export_usdz_bytes(sc), "model/vnd.usdz+zip", slug + ".usdz");
                 }
                 if (fmt == "stl") {
                     return HttpResponse::bytes(export_stl_bytes(sc), "model/stl", slug + ".stl");

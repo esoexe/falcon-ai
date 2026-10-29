@@ -8,32 +8,36 @@ import CommandPalette from './components/CommandPalette.jsx';
 
 const STARTER_PROMPTS = [
   { label: 'GT Sports Car', mode: 'build', text: 'Create a 3D realistic model of a car' },
-  { label: 'Cyberpunk Samurai', mode: 'build', text: 'Realistic cyberpunk samurai bust with battle-worn armor' },
+  { label: 'Sculpted Bust', mode: 'build', text: 'Sculpted marble warrior portrait bust with armored collar' },
   { label: 'Space Fighter', mode: 'build', text: 'Armored twin-engine sci-fi starfighter with cockpit' },
   { label: 'Space Dogfight Game', mode: 'game', text: 'Playable 3D space dogfight game in an asteroid belt' },
 ];
 
 const MATERIAL_PRESETS = [
-  { id: 'brushed_titanium', label: 'Brushed Titanium', color: '#94a3b8', metallic: 0.9, roughness: 0.25, finish: 'brushed_metal' },
-  { id: 'carbon_fiber', label: 'Forged Carbon', color: '#1f2937', metallic: 0.35, roughness: 0.32, finish: 'carbon_weave' },
-  { id: 'crimson_clearcoat', label: 'Crimson Metallic', color: '#dc2626', metallic: 0.72, roughness: 0.16, finish: 'metallic_flake' },
-  { id: 'royal_gold', label: 'Hammered Gold', color: '#eab308', metallic: 0.94, roughness: 0.22, finish: 'hammered_metal' },
-  { id: 'matte_ceramic', label: 'Matte Ceramic', color: '#e5e7eb', metallic: 0.06, roughness: 0.48, finish: 'ceramic' },
-  { id: 'obsidian_stone', label: 'Carved Obsidian', color: '#18181b', metallic: 0.18, roughness: 0.42, finish: 'weathered_stone' },
-  { id: 'damascus_steel', label: 'Damascus Steel', color: '#cbd5e1', metallic: 0.92, roughness: 0.2, finish: 'damascus' },
-  { id: 'walnut_wood', label: 'Walnut Wood', color: '#78350f', metallic: 0.05, roughness: 0.62, finish: 'wood_grain' },
+  { id: 'brushed_titanium', label: 'Brushed Titanium', color: '#94a3b8', metallic: 0.9, roughness: 0.25, finish: 'brushed_titanium' },
+  { id: 'carbon_fiber', label: 'Forged Carbon', color: '#1f2937', metallic: 0.35, roughness: 0.32, finish: 'carbon_fiber' },
+  { id: 'crimson_clearcoat', label: 'Crimson Armor', color: '#dc2626', metallic: 0.72, roughness: 0.18, finish: 'painted_armor' },
+  { id: 'royal_gold', label: 'Anodized Gold', color: '#eab308', metallic: 0.94, roughness: 0.2, finish: 'anodized_gold' },
+  { id: 'damascus_steel', label: 'Damascus Steel', color: '#cbd5e1', metallic: 0.92, roughness: 0.2, finish: 'damascus_steel' },
+  { id: 'stylized_handpainted', label: 'Stylized Hand-Paint', color: '#60a5fa', metallic: 0.16, roughness: 0.48, finish: 'stylized_handpainted' },
+  { id: 'anime_cel', label: 'Anime Cel-Shade', color: '#38bdf8', metallic: 0.05, roughness: 0.65, finish: 'anime_cel' },
+  { id: 'organic_skin', label: 'Organic Skin', color: '#d6b49c', metallic: 0.04, roughness: 0.44, finish: 'organic_skin' },
+  { id: 'woven_fabric', label: 'Woven Fabric', color: '#7c2d12', metallic: 0.06, roughness: 0.72, finish: 'woven_fabric' },
+  { id: 'marble_veined', label: 'Veined Marble', color: '#f1f5f9', metallic: 0.08, roughness: 0.24, finish: 'marble_veined' },
 ];
 
 const SLASH_COMMANDS = [
   { cmd: '/providers', desc: 'Open Settings & Providers (API keys, Ollama, custom URLs)' },
+  { cmd: '/drafts', desc: 'Generate 4-candidate draft preview grid for current prompt' },
+  { cmd: '/remesh', desc: 'Open Smart Quad Remesh & exact polycount panel' },
+  { cmd: '/plugins', desc: 'Open Unity / Unreal / Godot / Roblox / Blender Live-Link plugins' },
   { cmd: '/new', desc: 'Start a fresh 3D model session' },
   { cmd: '/game', desc: 'Switch composer to playable 3D Game mode' },
-  { cmd: '/build', desc: 'Switch composer to 3D Model Build mode' },
-  { cmd: '/edit', desc: 'Modify the current model or game' },
   { cmd: '/inspector', desc: 'Toggle right-hand Studio Inspector' },
+  { cmd: '/export fbx', desc: 'Download Autodesk .FBX 7.4 (Quads + Skeleton + Anim)' },
+  { cmd: '/export usdz', desc: 'Download Apple Vision Pro / iOS AR .USDZ' },
   { cmd: '/export glb', desc: 'Download textured PBR .GLB binary' },
   { cmd: '/export 3mf', desc: 'Download slicer-ready .3MF package' },
-  { cmd: '/export stl', desc: 'Download watertight binary .STL' },
   { cmd: '/theme', desc: 'Switch between OpenCode Dark and Light themes' },
 ];
 
@@ -95,17 +99,31 @@ export default function App() {
     { role: 'system', text: 'Falcon AI ready · Pure C++20 engine + multi-provider router online.' },
   ]);
 
-  // Inspector tool states
+  // Inspector tool states (v3.0 Full Meshy Parity)
   const [imgMode, setImgMode] = useState('volumetric');
   const [imgDepth, setImgDepth] = useState(0.68);
+  const [mvFiles, setMvFiles] = useState({ front: null, side: null, back: null, top: null });
   const [cadMmX, setCadMmX] = useState(120);
   const [cadMmY, setCadMmY] = useState(60);
   const [cadMmZ, setCadMmZ] = useState(80);
-  const [rigTemplate, setRigTemplate] = useState('biped');
+  const [rigTemplate, setRigTemplate] = useState('auto');
+  const [motionLibrary, setMotionLibrary] = useState([]);
+  const [selectedClipId, setSelectedClipId] = useState('walk_standard');
   const [bpJsonText, setBpJsonText] = useState('');
+
+  // v3.0 Smart Quad Remesh, 4-Draft Grid, HD 4K PBR & 3D Region Brush states
+  const [draftCandidates, setDraftCandidates] = useState([]);
+  const [remeshTargetFaces, setRemeshTargetFaces] = useState(12000);
+  const [remeshQuadMode, setRemeshQuadMode] = useState(true);
+  const [texResolution, setTexResolution] = useState(1024);
+  const [aiTexPrompt, setAiTexPrompt] = useState('');
+  const [regionBrushActive, setRegionBrushActive] = useState(false);
+  const [regionBrushColor, setRegionBrushColor] = useState('#38bdf8');
+  const [regionBrushRadius, setRegionBrushRadius] = useState(0.32);
 
   const composerRef = useRef(null);
   const quickImageInputRef = useRef(null);
+  const importMeshInputRef = useRef(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -179,20 +197,23 @@ export default function App() {
 
   const bootstrap = useCallback(async () => {
     try {
-      const [hwRes, rtRes, asRes, gmRes, pvRes] = await Promise.all([
+      const [hwRes, rtRes, asRes, gmRes, pvRes, animRes] = await Promise.all([
         fetch('/api/hardware'),
         fetch('/api/settings/router'),
         fetch('/api/assets'),
         fetch('/api/games'),
         fetch('/api/providers'),
+        fetch('/api/animations'),
       ]);
-      const [hw, rt, asRaw, gmRaw, pvData] = await Promise.all([
+      const [hw, rt, asRaw, gmRaw, pvData, animRaw] = await Promise.all([
         hwRes.json(),
         rtRes.json(),
         asRes.ok ? asRes.json() : [],
         gmRes.ok ? gmRes.json() : [],
         pvRes.ok ? pvRes.json() : { counts: { active_in_swarm: 16 } },
+        animRes.ok ? animRes.json() : [],
       ]);
+      if (Array.isArray(animRaw) && animRaw.length > 0) setMotionLibrary(animRaw);
 
       const asList = normalizeList(asRaw, 'assets');
       const gmList = normalizeList(gmRaw, 'games');
@@ -239,14 +260,72 @@ export default function App() {
     bootstrap();
   }, [bootstrap]);
 
-  // Core Actions (100% matched to C++20 main.cpp routes)
+  // Core Actions (100% matched to C++20 v3.0 main.cpp routes)
+  const generateDraftGrid = async (promptText) => {
+    const q = (promptText || '').trim();
+    if (!q) return;
+    setStudioMode('model');
+    setLoading(true);
+    setLoadingMsg('Synthesizing 4 parallel draft candidates...');
+    pushLog('user', `[4-Draft Preview] ${q}`);
+    try {
+      const r = await fetch('/api/generate/draft-grid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: q }),
+      });
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+      const cands = data.candidates || [];
+      setDraftCandidates(cands);
+      if (cands.length > 0) syncActiveAsset(cands[0]);
+      await refreshLists();
+      pushLog('agent', `4-Draft Grid ready (${data.total_ms}ms) — pick any card or click Refine to Ultra.`);
+    } catch (e) {
+      pushLog('error', e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refineCandidateToUltra = async (cand) => {
+    if (!cand) return;
+    setLoading(true);
+    setLoadingMsg(`Refining "${cand.variant_label || cand.title}" to Ultra...`);
+    try {
+      const r = await fetch('/api/swarm/detail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          asset_id: cand.id,
+          instruction: 'refine ultra high detail',
+          resolution: Math.max(gridRes, 108),
+        }),
+      });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      setDraftCandidates([]);
+      syncActiveAsset(d);
+      await refreshLists();
+      pushLog('agent', `Refined "${d.title}" · ${(d.telemetry?.faces || 0).toLocaleString()} tris`);
+    } catch (e) {
+      pushLog('error', e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const generateFromText = async (promptText, overrideQuality) => {
     const q = (promptText || '').trim();
     if (!q) return;
     const qMode = overrideQuality || qualityMode;
+    if (qMode === 'draft4') {
+      await generateDraftGrid(q);
+      return;
+    }
     setStudioMode('model');
     setLoading(true);
-    setLoadingMsg('Synthesizing 3D geometry & PBR materials...');
+    setLoadingMsg(qMode === 'neural_organic' ? 'Evaluating C++20 SIREN implicit organic field...' : 'Synthesizing 3D geometry & PBR materials...');
     pushLog('user', q);
     try {
       const r = await fetch('/api/generate/text', {
@@ -255,6 +334,7 @@ export default function App() {
         body: JSON.stringify({
           prompt: q,
           style: 'realistic',
+          sculpt_mode: qMode === 'neural_organic' ? 'neural_organic' : 'auto',
           ultra_detail: qMode === 'ultra',
           resolution: qMode === 'draft' ? 68 : gridRes,
         }),
@@ -362,10 +442,161 @@ export default function App() {
     pushLog('system', `Exported ${activeAsset.title || 'model'}.${ext}`);
   };
 
+  const handleMeshImport = async (file) => {
+    if (!file) return;
+    setStudioMode('model');
+    setLoading(true);
+    setLoadingMsg(`Importing 3D mesh ${file.name}...`);
+    pushLog('user', `[Import Mesh] ${file.name}`);
+    try {
+      const fd = new FormData();
+      fd.append('file', file, file.name);
+      const r = await fetch('/api/assets/import', { method: 'POST', body: fd });
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+      syncActiveAsset(data);
+      await refreshLists();
+      pushLog('agent', `Imported "${data.title}" · ${(data.telemetry?.faces || 0).toLocaleString()} tris — ready for 4K PBR, Quad Remesh & Auto-Rig!`);
+    } catch (e) {
+      pushLog('error', e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMultiViewGenerate = async () => {
+    if (!mvFiles.front && !mvFiles.side) {
+      pushLog('error', 'Select at least a Front view image for Multi-View 3D.');
+      return;
+    }
+    setStudioMode('model');
+    setLoading(true);
+    setLoadingMsg('Carving multi-view visual hull & projecting photo RGB...');
+    try {
+      const fd = new FormData();
+      if (mvFiles.front) fd.append('front', mvFiles.front, mvFiles.front.name);
+      if (mvFiles.side) fd.append('side', mvFiles.side, mvFiles.side.name);
+      if (mvFiles.back) fd.append('back', mvFiles.back, mvFiles.back.name);
+      if (mvFiles.top) fd.append('top', mvFiles.top, mvFiles.top.name);
+      fd.append('resolution', '96');
+      fd.append('depth_inflation', String(imgDepth));
+      const r = await fetch('/api/generate/multiview', { method: 'POST', body: fd });
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+      syncActiveAsset(data);
+      await refreshLists();
+      pushLog('agent', `Multi-View 3D built · ${(data.telemetry?.faces || 0).toLocaleString()} photo-projected tris`);
+    } catch (e) {
+      pushLog('error', e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const runSmartRemesh = async () => {
+    if (!activeAsset) return;
+    setLoading(true);
+    setLoadingMsg(`Running Garland-Heckbert QEM (${remeshQuadMode ? 'Quad-Dominant' : 'Triangle'} · ${remeshTargetFaces.toLocaleString()} target)...`);
+    try {
+      const r = await fetch(`/api/mesh/${activeAsset.id}/smart-remesh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_faces: Number(remeshTargetFaces),
+          quad_mode: remeshQuadMode,
+          preserve_creases: true,
+          tex_resolution: Number(texResolution),
+        }),
+      });
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+      syncActiveAsset(data);
+      await refreshLists();
+      const rep = data.remesh_report || {};
+      pushLog(
+        'agent',
+        remeshQuadMode
+          ? `Quad Remesh complete · ${(rep.quad_count || 0).toLocaleString()} quads (${(rep.final_polygons || 0).toLocaleString()} total faces)`
+          : `QEM Remesh complete · ${(rep.final_triangles || 0).toLocaleString()} triangles`
+      );
+    } catch (e) {
+      pushLog('error', e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const runAiTexture = async () => {
+    if (!activeAsset || !aiTexPrompt.trim()) return;
+    setLoading(true);
+    setLoadingMsg(`Baking ${texResolution}px PBR maps ("${aiTexPrompt.trim()}")...`);
+    try {
+      const r = await fetch(`/api/mesh/${activeAsset.id}/ai-texture`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiTexPrompt.trim(), tex_resolution: Number(texResolution) }),
+      });
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+      syncActiveAsset(data);
+      await refreshLists();
+      pushLog('agent', `Baked ${texResolution}×${texResolution} HD PBR texture for "${aiTexPrompt.trim()}"`);
+    } catch (e) {
+      pushLog('error', e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePaintRegionPoint = async (xyz) => {
+    if (!activeAsset || !xyz) return;
+    try {
+      const r = await fetch(`/api/mesh/${activeAsset.id}/paint-region`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          center: xyz,
+          radius: Number(regionBrushRadius),
+          color: regionBrushColor,
+          feather: 0.42,
+        }),
+      });
+      const data = await r.json();
+      if (!data.error) {
+        syncActiveAsset(data);
+        pushLog('agent', `3D Brush healed ${data.painted_vertices || 0} vertices at [${xyz.map((n) => n.toFixed(2)).join(', ')}]`);
+      }
+    } catch (e) {
+      pushLog('error', e.message);
+    }
+  };
+
+  const launchDesktopSlicer = async (slicerId) => {
+    if (!activeAsset) return;
+    setExportMenuOpen(false);
+    try {
+      const r = await fetch(`/api/slicer-links/${activeAsset.id}`);
+      const d = await r.json();
+      const hit = (d.slicers || []).find((s) => s.id === slicerId);
+      if (hit?.uri) {
+        window.location.href = hit.uri;
+        pushLog('system', `Sent ${activeAsset.title}.3mf to ${hit.name} (${hit.uri.split('://')[0]}://)`);
+      }
+    } catch (e) {
+      pushLog('error', e.message);
+    }
+  };
+
+  const downloadPluginZip = (engineSlug) => {
+    setExportMenuOpen(false);
+    window.open(`/api/plugins/${engineSlug}`, '_blank');
+    pushLog('system', `Downloaded official Falcon AI v3.0 ${engineSlug.toUpperCase()} Live-Link plugin (.zip)`);
+  };
+
   const applyMaterial = async (preset) => {
     if (!activeAsset) return;
     setLoading(true);
-    setLoadingMsg(`Applying ${preset.label}...`);
+    setLoadingMsg(`Baking ${texResolution}px ${preset.label}...`);
     try {
       const partId =
         selectedPartIdx >= 0 ? (activeAsset.parts || [])[selectedPartIdx]?.id || '' : '';
@@ -377,13 +608,14 @@ export default function App() {
           metallic: preset.metallic,
           roughness: preset.roughness,
           finish: preset.finish,
+          tex_resolution: Number(texResolution),
           part_id: partId,
         }),
       });
       const data = await r.json();
       syncActiveAsset(data);
       await refreshLists();
-      pushLog('agent', `Applied PBR material "${preset.label}"`);
+      pushLog('agent', `Applied ${texResolution}px PBR "${preset.label}"`);
     } finally {
       setLoading(false);
     }
@@ -449,20 +681,22 @@ export default function App() {
     }
   };
 
-  const runAutoRig = async () => {
+  const runAutoRig = async (overrideClip) => {
     if (!activeAsset) return;
+    const clipToUse = overrideClip || selectedClipId || 'walk_standard';
     setLoading(true);
-    setLoadingMsg('Binding skeleton & skin weights...');
+    setLoadingMsg('Binding 4-bone volumetric skin & 24 motion clips...');
     try {
       const r = await fetch(`/api/mesh/${activeAsset.id}/rig`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rig_type: rigTemplate }),
+        body: JSON.stringify({ rig_type: rigTemplate, clip_id: clipToUse, bake_skin: true }),
       });
       const data = await r.json();
       syncActiveAsset(data);
       setShowSkeleton(true);
-      pushLog('agent', `Bound ${data.rig?.joints?.length || 0} joints (${rigTemplate})`);
+      setAnimMode(clipToUse);
+      pushLog('agent', `Skinned ${data.rig?.bone_count || data.rig?.joints?.length || 17} bones + embedded 24 glTF/FBX motion clips`);
     } finally {
       setLoading(false);
     }
@@ -547,6 +781,15 @@ export default function App() {
     setComposerText('');
     if (cmd.startsWith('/providers') || cmd.startsWith('/settings')) {
       openProvidersModal('connect');
+    } else if (cmd.startsWith('/drafts')) {
+      const rest = raw.trim().slice(7).trim() || activeAsset?.prompt || 'Armored sci-fi cyber knight';
+      await generateDraftGrid(rest);
+    } else if (cmd === '/remesh') {
+      setInspectorOpen(true);
+      setInspectorTab('parts');
+    } else if (cmd === '/plugins') {
+      setInspectorOpen(true);
+      setInspectorTab('plugins');
     } else if (cmd === '/new') {
       setStudioMode('model');
       setAgentMode('build');
@@ -729,6 +972,33 @@ export default function App() {
         action: () => setInspectorOpen((v) => !v),
       },
       {
+        id: 'import-mesh',
+        category: '3D Tool',
+        label: 'Import External 3D Mesh (.GLB / .OBJ / .STL / .PLY)...',
+        action: () => importMeshInputRef.current?.click(),
+      },
+      {
+        id: 'quad-remesh',
+        category: '3D Tool',
+        label: 'Smart Quad Remesh & Polycount Target...',
+        action: () => {
+          setInspectorOpen(true);
+          setInspectorTab('parts');
+        },
+      },
+      {
+        id: 'export-fbx',
+        category: 'Export',
+        label: 'Export Autodesk .FBX 7.4 (Quads + Rig + Anim)',
+        action: () => downloadExport('fbx'),
+      },
+      {
+        id: 'export-usdz',
+        category: 'Export',
+        label: 'Export Apple Vision Pro / ARKit .USDZ',
+        action: () => downloadExport('usdz'),
+      },
+      {
         id: 'export-glb',
         category: 'Export',
         label: 'Export Textured .GLB',
@@ -777,7 +1047,13 @@ export default function App() {
       onDrop={(e) => {
         e.preventDefault();
         const file = e.dataTransfer?.files?.[0];
-        if (file && file.type.startsWith('image/')) handleImageUpload(file);
+        if (!file) return;
+        const low = file.name.toLowerCase();
+        if (low.endsWith('.glb') || low.endsWith('.obj') || low.endsWith('.stl') || low.endsWith('.ply')) {
+          handleMeshImport(file);
+        } else if (file.type.startsWith('image/')) {
+          handleImageUpload(file);
+        }
       }}
     >
       <input
@@ -787,6 +1063,16 @@ export default function App() {
         style={{ display: 'none' }}
         onChange={(e) => {
           if (e.target.files?.[0]) handleImageUpload(e.target.files[0]);
+          e.target.value = '';
+        }}
+      />
+      <input
+        ref={importMeshInputRef}
+        type="file"
+        accept=".glb,.obj,.stl,.ply"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          if (e.target.files?.[0]) handleMeshImport(e.target.files[0]);
           e.target.value = '';
         }}
       />
@@ -800,7 +1086,7 @@ export default function App() {
             <div className="oc-logo">
               <span className="oc-logo-mark">F</span>
               <span>Falcon</span>
-              <span className="oc-kbd" style={{ fontSize: 10 }}>v2.1</span>
+              <span className="oc-kbd" style={{ fontSize: 10 }}>v3.0</span>
             </div>
             <button
               className="oc-icon-btn oc-no-drag"
@@ -835,16 +1121,28 @@ export default function App() {
             </div>
           </div>
 
-          <button
-            className="oc-new-btn"
-            onClick={() => {
-              setAgentMode(studioMode === 'game' ? 'game' : 'build');
-              composerRef.current?.focus();
-            }}
-          >
-            <span>+ New {studioMode === 'game' ? '3D Game' : '3D Model'}</span>
-            <span className="oc-kbd">/</span>
-          </button>
+          <div style={{ display: 'flex', gap: 6, margin: '0 10px 8px' }}>
+            <button
+              className="oc-new-btn"
+              style={{ margin: 0, flex: 1 }}
+              onClick={() => {
+                setAgentMode(studioMode === 'game' ? 'game' : 'build');
+                composerRef.current?.focus();
+              }}
+            >
+              <span>+ New {studioMode === 'game' ? 'Game' : 'Model'}</span>
+              <span className="oc-kbd">/</span>
+            </button>
+            {studioMode === 'model' && (
+              <button
+                className="oc-btn oc-btn-sm"
+                title="Import external .GLB / .OBJ / .STL / .PLY mesh for 4K Retexturing, Quad Remesh & Auto-Rig"
+                onClick={() => importMeshInputRef.current?.click()}
+              >
+                Import 3D
+              </button>
+            )}
+          </div>
 
           <div className="oc-session-section-title">
             <span>{studioMode === 'game' ? 'Playable Worlds' : 'Recent Models'}</span>
@@ -954,7 +1252,11 @@ export default function App() {
             </span>
             {studioMode === 'model' && activeAsset && (
               <span className="oc-doc-meta">
-                {trisCount.toLocaleString()} tris · {parts.length} parts
+                {activeAsset.quad_mode && activeAsset.quad_count > 0
+                  ? `${activeAsset.quad_count.toLocaleString()} quads · `
+                  : `${trisCount.toLocaleString()} tris · `}
+                {parts.length} parts
+                {activeAsset.tex_resolution > 256 ? ` · ${activeAsset.tex_resolution >= 4096 ? '4K' : activeAsset.tex_resolution >= 2048 ? '2K' : '1K'} PBR` : ''}
                 {telem.watertight ? ' · Watertight' : ''}
               </span>
             )}
@@ -1001,8 +1303,16 @@ export default function App() {
                     </>
                   )}
                   <button className="oc-popover-item" onClick={() => downloadExport('glb')}>
-                    <span>Textured Binary</span>
+                    <span>Khronos Binary (PBR/Rig)</span>
                     <span className="oc-kbd">.glb</span>
+                  </button>
+                  <button className="oc-popover-item" onClick={() => downloadExport('fbx')}>
+                    <span>Autodesk Game/DCC</span>
+                    <span className="oc-kbd">.fbx</span>
+                  </button>
+                  <button className="oc-popover-item" onClick={() => downloadExport('usdz')}>
+                    <span>Apple Vision / iOS AR</span>
+                    <span className="oc-kbd">.usdz</span>
                   </button>
                   <button className="oc-popover-item" onClick={() => downloadExport('3mf')}>
                     <span>Bambu / Orca Slicer</span>
@@ -1013,12 +1323,25 @@ export default function App() {
                     <span className="oc-kbd">.stl</span>
                   </button>
                   <button className="oc-popover-item" onClick={() => downloadExport('obj')}>
-                    <span>Wavefront Mesh</span>
+                    <span>Quad / Tri Wavefront</span>
                     <span className="oc-kbd">.obj</span>
                   </button>
                   <button className="oc-popover-item" onClick={() => downloadExport('cs')}>
                     <span>Unity C# Builder</span>
                     <span className="oc-kbd">.cs</span>
+                  </button>
+                  <div style={{ borderTop: '1px solid var(--border-subtle)', margin: '4px 0' }} />
+                  <button className="oc-popover-item" onClick={() => launchDesktopSlicer('bambu')}>
+                    <span>Send to Bambu Studio</span>
+                    <span className="oc-kbd">↗</span>
+                  </button>
+                  <button className="oc-popover-item" onClick={() => launchDesktopSlicer('orca')}>
+                    <span>Send to OrcaSlicer</span>
+                    <span className="oc-kbd">↗</span>
+                  </button>
+                  <button className="oc-popover-item" onClick={() => downloadPluginZip('unity')}>
+                    <span>Unity / UE5 / Godot Plugins</span>
+                    <span className="oc-kbd">.zip</span>
                   </button>
                 </div>
               )}
@@ -1103,6 +1426,8 @@ export default function App() {
               glbUrl={activeAsset?.glb_url || (activeAsset ? `/api/export/${activeAsset.id}/glb` : null)}
               shadingMode={shadingMode}
               autoRotate={autoRotate}
+              regionBrushActive={regionBrushActive}
+              onPaintRegionPoint={handlePaintRegionPoint}
               rigData={activeAsset?.rig || null}
               showRig={showSkeleton}
               activeAnimation={animMode === 'none' ? 'rest' : animMode}
@@ -1116,6 +1441,65 @@ export default function App() {
               SIGNATURE FLOATING OPENCODE COMPOSER AT BOTTOM OF STAGE
               ================================================================ */}
           <div className="oc-composer-region">
+            {draftCandidates.length > 0 && (
+              <div
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-strong)',
+                  borderRadius: 10,
+                  padding: '8px 10px',
+                  marginBottom: 8,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11.5 }}>
+                  <span style={{ fontWeight: 600 }}>4-Candidate Draft Preview Grid — Click to inspect or Refine to Ultra</span>
+                  <button className="oc-icon-btn" onClick={() => setDraftCandidates([])}>
+                    ×
+                  </button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
+                  {draftCandidates.map((cand, idx) => {
+                    const isSel = activeAsset?.id === cand.id;
+                    return (
+                      <div
+                        key={cand.id || idx}
+                        onClick={() => syncActiveAsset(cand)}
+                        style={{
+                          padding: '7px 8px',
+                          borderRadius: 7,
+                          cursor: 'pointer',
+                          border: isSel ? '1px solid var(--ink-primary)' : '1px solid var(--border-subtle)',
+                          background: isSel ? 'var(--bg-hover)' : 'var(--bg-surface)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 4,
+                        }}
+                      >
+                        <div style={{ fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {cand.variant_label || `Variant #${idx + 1}`}
+                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)' }}>
+                          {(cand.telemetry?.faces || 0).toLocaleString()} tris
+                        </div>
+                        <button
+                          className="oc-btn oc-btn-sm oc-btn-primary"
+                          style={{ fontSize: 10.5, padding: '3px 6px' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            refineCandidateToUltra(cand);
+                          }}
+                        >
+                          Refine Ultra
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {historyOpen && (
               <div className="oc-history-drawer">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1293,9 +1677,11 @@ export default function App() {
                       className="oc-meta-pill"
                       value={qualityMode}
                       onChange={(e) => setQualityMode(e.target.value)}
-                      title="3D synthesis detail preset"
+                      title="3D synthesis mode (Ultra Swarm, 4-Draft Grid, Neural Organic SIREN, or Fast Draft)"
                     >
                       <option value="ultra">Ultra Swarm</option>
+                      <option value="draft4">4-Draft Grid</option>
+                      <option value="neural_organic">Neural Organic</option>
                       <option value="sculpted">Sculpted SDF</option>
                       <option value="draft">Fast Draft</option>
                     </select>
@@ -1330,13 +1716,13 @@ export default function App() {
                   { id: 'json', label: 'Spec' },
                 ]
               : [
-                  { id: 'parts', label: 'Parts' },
-                  { id: 'material', label: 'Material' },
-                  { id: 'image', label: 'Image/Sketch' },
-                  { id: 'print', label: 'Print/CAD' },
-                  { id: 'rig', label: 'Rig' },
+                  { id: 'parts', label: 'Topo' },
+                  { id: 'material', label: '4K PBR' },
+                  { id: 'image', label: 'M-View' },
+                  { id: 'print', label: 'Print' },
+                  { id: 'rig', label: 'Rig 24' },
+                  { id: 'plugins', label: 'Plugins' },
                   { id: 'swarm', label: 'Swarm' },
-                  { id: 'json', label: 'JSON' },
                 ]
             ).map((t) => (
               <button
@@ -1418,8 +1804,12 @@ export default function App() {
                   <>
                     <div className="stat-grid-2">
                       <div className="stat-box">
-                        <div className="k">Triangles</div>
-                        <div className="v">{trisCount.toLocaleString()}</div>
+                        <div className="k">{activeAsset?.quad_mode ? 'Quads / Tris' : 'Triangles'}</div>
+                        <div className="v">
+                          {activeAsset?.quad_mode && activeAsset?.quad_count > 0
+                            ? `${activeAsset.quad_count.toLocaleString()}q`
+                            : trisCount.toLocaleString()}
+                        </div>
                       </div>
                       <div className="stat-box">
                         <div className="k">Size (mm)</div>
@@ -1427,6 +1817,56 @@ export default function App() {
                           {dim.x || 0}×{dim.y || 0}×{dim.z || 0}
                         </div>
                       </div>
+                    </div>
+
+                    {/* Smart Quad Remesh & Exact Target Polycount (Garland-Heckbert QEM) */}
+                    <div className="field-group">
+                      <div className="field-label">
+                        <span>Smart Topology & Quad Remesh</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5 }}>
+                          {Number(remeshTargetFaces).toLocaleString()} faces
+                        </span>
+                      </div>
+                      <div className="row-2">
+                        <button
+                          className={`oc-btn oc-btn-sm ${remeshQuadMode ? 'oc-btn-primary' : ''}`}
+                          onClick={() => setRemeshQuadMode(true)}
+                        >
+                          Quad-Dominant
+                        </button>
+                        <button
+                          className={`oc-btn oc-btn-sm ${!remeshQuadMode ? 'oc-btn-primary' : ''}`}
+                          onClick={() => setRemeshQuadMode(false)}
+                        >
+                          Triangles
+                        </button>
+                      </div>
+                      <input
+                        type="range"
+                        min={500}
+                        max={120000}
+                        step={500}
+                        value={remeshTargetFaces}
+                        onChange={(e) => setRemeshTargetFaces(Number(e.target.value))}
+                      />
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {[1500, 8000, 25000, 60000].map((cnt) => (
+                          <button
+                            key={cnt}
+                            className="oc-btn oc-btn-sm"
+                            style={{ flex: 1, fontSize: 10.5 }}
+                            onClick={() => setRemeshTargetFaces(cnt)}
+                          >
+                            {cnt >= 1000 ? `${cnt / 1000}k` : cnt}
+                          </button>
+                        ))}
+                      </div>
+                      <button className="oc-btn oc-btn-primary" disabled={loading} onClick={runSmartRemesh}>
+                        Run Smart {remeshQuadMode ? 'Quad ' : ''}Remesh
+                      </button>
+                      <button className="oc-btn" disabled={loading} onClick={() => importMeshInputRef.current?.click()}>
+                        + Import External Mesh (.GLB / .OBJ / .STL / .PLY)
+                      </button>
                     </div>
 
                     <div className="field-group">
@@ -1468,33 +1908,144 @@ export default function App() {
                 )}
 
                 {inspectorTab === 'material' && (
-                  <div className="field-group">
-                    <div className="field-label">
-                      <span>PBR Presets</span>
-                      <span style={{ textTransform: 'none', fontWeight: 400 }}>
-                        {selectedPartIdx >= 0 ? `Part #${selectedPartIdx + 1}` : 'Whole Model'}
-                      </span>
+                  <>
+                    <div className="field-group">
+                      <div className="field-label">
+                        <span>HD PBR Bake Resolution</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5 }}>{texResolution}×{texResolution}</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
+                        {[
+                          { r: 256, lbl: '256' },
+                          { r: 1024, lbl: '1K' },
+                          { r: 2048, lbl: '2K HD' },
+                          { r: 4096, lbl: '4K Ultra' },
+                        ].map((opt) => (
+                          <button
+                            key={opt.r}
+                            className={`oc-btn oc-btn-sm ${texResolution === opt.r ? 'oc-btn-primary' : ''}`}
+                            onClick={() => setTexResolution(opt.r)}
+                          >
+                            {opt.lbl}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="chip-grid">
-                      {MATERIAL_PRESETS.map((m) => (
+
+                    <div className="field-group">
+                      <div className="field-label">
+                        <span>AI Prompt-to-PBR Texture</span>
+                      </div>
+                      <input
+                        type="text"
+                        className="text-input"
+                        placeholder="e.g. battle-worn gold armor, anime cel, organic skin..."
+                        value={aiTexPrompt}
+                        onChange={(e) => setAiTexPrompt(e.target.value)}
+                      />
+                      <button className="oc-btn oc-btn-primary" disabled={loading || !aiTexPrompt.trim()} onClick={runAiTexture}>
+                        Synthesize {texResolution >= 4096 ? '4K' : texResolution >= 2048 ? '2K' : '1K'} PBR Texture
+                      </button>
+                    </div>
+
+                    <div className="field-group">
+                      <div className="field-label">
+                        <span>3D Region Brush Healer</span>
                         <button
-                          key={m.id}
-                          className="chip"
-                          disabled={loading}
-                          onClick={() => applyMaterial(m)}
+                          className={`oc-btn oc-btn-sm ${regionBrushActive ? 'oc-btn-primary' : ''}`}
+                          onClick={() => setRegionBrushActive((v) => !v)}
                         >
-                          {m.label}
+                          {regionBrushActive ? 'Brush ON (Click 3D)' : 'Enable Brush'}
                         </button>
-                      ))}
+                      </div>
+                      {regionBrushActive && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <input
+                            type="color"
+                            value={regionBrushColor}
+                            onChange={(e) => setRegionBrushColor(e.target.value)}
+                            style={{ width: 34, height: 28, border: 'none', background: 'transparent', cursor: 'pointer' }}
+                          />
+                          <input
+                            type="range"
+                            min={0.1}
+                            max={0.9}
+                            step={0.05}
+                            value={regionBrushRadius}
+                            onChange={(e) => setRegionBrushRadius(Number(e.target.value))}
+                            style={{ flex: 1 }}
+                          />
+                          <span style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)' }}>r={regionBrushRadius}</span>
+                        </div>
+                      )}
                     </div>
-                  </div>
+
+                    <div className="field-group">
+                      <div className="field-label">
+                        <span>PBR & Stylized Finishes</span>
+                        <span style={{ textTransform: 'none', fontWeight: 400 }}>
+                          {selectedPartIdx >= 0 ? `Part #${selectedPartIdx + 1}` : 'Whole Model'}
+                        </span>
+                      </div>
+                      <div className="chip-grid">
+                        {MATERIAL_PRESETS.map((m) => (
+                          <button
+                            key={m.id}
+                            className="chip"
+                            disabled={loading}
+                            onClick={() => applyMaterial(m)}
+                          >
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 {inspectorTab === 'image' && (
                   <>
                     <div className="field-group">
                       <div className="field-label">
-                        <span>Image to 3D</span>
+                        <span>Multi-View Photo-to-3D (1–4 Views)</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                        {[
+                          { key: 'front', label: 'Front (Req)' },
+                          { key: 'side', label: 'Right / Side' },
+                          { key: 'back', label: 'Back View' },
+                          { key: 'top', label: 'Top View' },
+                        ].map((slot) => (
+                          <label
+                            key={slot.key}
+                            className="oc-btn oc-btn-sm"
+                            style={{ justifyContent: 'space-between', cursor: 'pointer', overflow: 'hidden' }}
+                          >
+                            <span>{mvFiles[slot.key] ? `✓ ${slot.key}` : slot.label}</span>
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/bmp"
+                              style={{ display: 'none' }}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0] || null;
+                                setMvFiles((prev) => ({ ...prev, [slot.key]: f }));
+                              }}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <button
+                        className="oc-btn oc-btn-primary"
+                        disabled={loading || (!mvFiles.front && !mvFiles.side)}
+                        onClick={handleMultiViewGenerate}
+                      >
+                        Carve Multi-View 3D + Project RGB
+                      </button>
+                    </div>
+
+                    <div className="field-group">
+                      <div className="field-label">
+                        <span>Single Image to 3D</span>
                       </div>
                       <select
                         className="select-input"
@@ -1505,7 +2056,7 @@ export default function App() {
                         <option value="relief">2.5D Relief</option>
                         <option value="lithophane">Backlit Lithophane</option>
                       </select>
-                      <button className="oc-btn oc-btn-primary" onClick={() => quickImageInputRef.current?.click()}>
+                      <button className="oc-btn" onClick={() => quickImageInputRef.current?.click()}>
                         Choose PNG / JPEG Image...
                       </button>
                     </div>
@@ -1557,37 +2108,131 @@ export default function App() {
                     <button className="oc-btn" onClick={splitWithPins}>
                       Auto-Split + 0.25mm Alignment Pins
                     </button>
+                    <div className="field-group" style={{ marginTop: 6 }}>
+                      <div className="field-label">
+                        <span>1-Click Send to Slicer (.3MF)</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                        {[
+                          { id: 'bambu', name: 'Bambu Studio' },
+                          { id: 'orca', name: 'OrcaSlicer' },
+                          { id: 'prusa', name: 'PrusaSlicer' },
+                          { id: 'cura', name: 'UltiMaker Cura' },
+                          { id: 'elegoo', name: 'ElegooSlicer' },
+                          { id: 'creality', name: 'Creality Print' },
+                        ].map((sl) => (
+                          <button key={sl.id} className="oc-btn oc-btn-sm" onClick={() => launchDesktopSlicer(sl.id)}>
+                            ↗ {sl.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </>
                 )}
 
                 {inspectorTab === 'rig' && (
+                  <>
+                    <div className="field-group">
+                      <div className="field-label">
+                        <span>Volumetric 4-Bone Auto-Rigger</span>
+                      </div>
+                      <select
+                        className="select-input"
+                        value={rigTemplate}
+                        onChange={(e) => setRigTemplate(e.target.value)}
+                      >
+                        <option value="auto">Auto-Detect Skeleton</option>
+                        <option value="biped">Humanoid Biped (17 Bones)</option>
+                        <option value="winged">Winged Hero / Dragon (21 Bones)</option>
+                        <option value="quadruped">Quadruped Creature (14 Bones)</option>
+                        <option value="vehicle">Vehicle Chassis + 4 Wheels</option>
+                      </select>
+                      <button className="oc-btn oc-btn-primary" disabled={loading} onClick={() => runAutoRig(selectedClipId)}>
+                        Bind Skin + Bake 24 Motion Clips
+                      </button>
+                      <div className="row-2">
+                        <button className="oc-btn oc-btn-sm" onClick={() => downloadExport('fbx')}>
+                          Export Rigged .FBX
+                        </button>
+                        <button className="oc-btn oc-btn-sm" onClick={() => downloadExport('glb')}>
+                          Export Animated .GLB
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="field-group">
+                      <div className="field-label">
+                        <span>24-Clip Motion Preset Library</span>
+                        <button className="oc-icon-btn" onClick={() => setAnimMode('none')}>
+                          Rest Pose
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 290, overflowY: 'auto' }}>
+                        {(motionLibrary.length > 0
+                          ? motionLibrary
+                          : [
+                              { id: 'idle_breathe', name: 'Idle Breathing', category: 'Locomotion' },
+                              { id: 'walk_standard', name: 'Natural Walk Cycle', category: 'Locomotion' },
+                              { id: 'run_sprint', name: 'Athletic Sprint Run', category: 'Locomotion' },
+                              { id: 'sword_slash', name: 'Katana / Sword Slash', category: 'Combat' },
+                              { id: 'wing_flap_soar', name: 'Dragon Wing Flap', category: 'Creature' },
+                            ]
+                        ).map((clip) => (
+                          <button
+                            key={clip.id}
+                            className={`oc-btn oc-btn-sm ${animMode === clip.id ? 'oc-btn-primary' : ''}`}
+                            style={{ justifyContent: 'space-between' }}
+                            onClick={() => {
+                              setSelectedClipId(clip.id);
+                              setAnimMode(clip.id);
+                            }}
+                          >
+                            <span>{clip.name}</span>
+                            <span style={{ fontSize: 10, opacity: 0.7 }}>{clip.category}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {inspectorTab === 'plugins' && (
                   <div className="field-group">
                     <div className="field-label">
-                      <span>Auto-Rig & Animation</span>
+                      <span>Official Zero-Python Live-Link Plugins</span>
                     </div>
-                    <select
-                      className="select-input"
-                      value={rigTemplate}
-                      onChange={(e) => setRigTemplate(e.target.value)}
-                    >
-                      <option value="biped">Humanoid Biped</option>
-                      <option value="quadruped">Quadruped</option>
-                      <option value="vehicle">Wheeled Vehicle</option>
-                    </select>
-                    <button className="oc-btn oc-btn-primary" onClick={runAutoRig}>
-                      Bind Skeleton
-                    </button>
-                    <div className="row-2">
-                      {['none', 'turntable', 'idle', 'walk'].map((m) => (
-                        <button
-                          key={m}
-                          className={`oc-btn oc-btn-sm ${animMode === m ? 'oc-btn-primary' : ''}`}
-                          onClick={() => setAnimMode(m)}
-                        >
-                          {m}
+                    <div style={{ fontSize: 11.5, color: 'var(--ink-secondary)', lineHeight: 1.45 }}>
+                      Stream Quad-Remeshed, 4K PBR, Skinned `.FBX` / `.GLB` / `.USDZ` assets straight into your engine:
+                    </div>
+                    {[
+                      { slug: 'unity', title: 'Unity 6 / 2022 LTS Plugin', tech: 'Pure C# EditorWindow (.cs)' },
+                      { slug: 'unreal', title: 'Unreal Engine 5.4 / 5.5', tech: 'Native C++ EditorSubsystem' },
+                      { slug: 'godot', title: 'Godot 4.x Dock Plugin', tech: 'Pure GDScript (@tool)' },
+                      { slug: 'roblox', title: 'Roblox Studio Plugin', tech: 'Pure Luau Widget (.lua)' },
+                      { slug: 'blender', title: 'Blender / Maya / C4D Bridge', tech: 'Compiled C++20 Watch-Daemon' },
+                    ].map((pl) => (
+                      <div
+                        key={pl.slug}
+                        style={{
+                          padding: '8px 10px',
+                          borderRadius: 8,
+                          border: '1px solid var(--border-subtle)',
+                          background: 'var(--bg-surface)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: 8,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600 }}>{pl.title}</div>
+                          <div style={{ fontSize: 10.5, color: 'var(--ink-muted)' }}>{pl.tech}</div>
+                        </div>
+                        <button className="oc-btn oc-btn-sm oc-btn-primary" onClick={() => downloadPluginZip(pl.slug)}>
+                          Download .zip
                         </button>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 

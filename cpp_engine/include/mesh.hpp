@@ -28,6 +28,7 @@ struct PBRMat {
     std::string emissive_hex = "";
     float emissive_strength = 0.0f;
     std::string finish = "forged_metal";
+    int tex_resolution = 256; // 256, 512, 1024 (1K), 2048 (2K), 4096 (4K)
 };
 
 struct Mesh {
@@ -38,8 +39,9 @@ struct Mesh {
 
     std::vector<Vec3> positions;
     std::vector<Vec3> normals;
-    std::vector<ColorRGBA> colors; // optional per-vertex RGBA (used by Image-to-3D)
+    std::vector<ColorRGBA> colors; // optional per-vertex RGBA (used by Image-to-3D & Region Paint)
     std::vector<std::array<uint32_t, 3>> faces;
+    std::vector<std::array<uint32_t, 4>> quads; // optional true 4-gon quad faces from Smart Quad Remesh
 
     bool has_vertex_colors() const {
         return !colors.empty() && colors.size() == positions.size();

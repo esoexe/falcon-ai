@@ -126,11 +126,13 @@ inline std::vector<uint8_t> export_glb_bytes(const Scene3D& scene) {
             pbr["metallicFactor"] = 1.0;
             pbr["roughnessFactor"] = 1.0;
 
+            int tres = std::clamp(m.material.tex_resolution > 0 ? m.material.tex_resolution : 256, 128, 4096);
             std::string fkey = fin + "_" + std::to_string(static_cast<int>(std::round(m.material.metallic * 10))) +
-                               "_" + std::to_string(static_cast<int>(std::round(m.material.roughness * 10)));
+                               "_" + std::to_string(static_cast<int>(std::round(m.material.roughness * 10))) +
+                               "_" + std::to_string(tres);
             auto cit = finish_tex_cache.find(fkey);
             if (cit == finish_tex_cache.end()) {
-                const auto& bundle = get_cached_pbr_textures(fin, m.material.metallic, m.material.roughness);
+                const auto& bundle = get_cached_pbr_textures(fin, m.material.metallic, m.material.roughness, tres);
                 int t_alb = embed_png_texture(bundle.albedo_png);
                 int t_orm = embed_png_texture(bundle.orm_png);
                 int t_nrm = embed_png_texture(bundle.normal_png);
@@ -715,7 +717,7 @@ inline std::vector<uint8_t> export_3mf_bytes(const Scene3D& scene, const std::st
 // ---------------------------------------------------------------------------
 inline std::vector<uint8_t> export_obj_bytes(const Scene3D& scene) {
     std::ostringstream oss;
-    oss << "# OpenMesh Studio 2.0 (C++20 Engine)\n";
+    oss << "# Falcon AI v3.0 (C++20 Quad/Tri Engine)\n";
     uint32_t v_offset = 1;
     for (const auto& m : scene.parts) {
         oss << "o " << m.id << "\n";
@@ -725,9 +727,21 @@ inline std::vector<uint8_t> export_obj_bytes(const Scene3D& scene) {
         for (const auto& n : m.normals) {
             oss << "vn " << n.x << " " << n.y << " " << n.z << "\n";
         }
-        for (const auto& f : m.faces) {
-            uint32_t a = f[0] + v_offset, b = f[1] + v_offset, c = f[2] + v_offset;
-            oss << "f " << a << "//" << a << " " << b << "//" << b << " " << c << "//" << c << "\n";
+        if (!m.quads.empty() && m.faces.size() >= m.quads.size() * 2) {
+            for (const auto& q : m.quads) {
+                uint32_t a = q[0] + v_offset, b = q[1] + v_offset, c = q[2] + v_offset, d = q[3] + v_offset;
+                oss << "f " << a << "//" << a << " " << b << "//" << b << " " << c << "//" << c << " " << d << "//" << d << "\n";
+            }
+            for (size_t fi = m.quads.size() * 2; fi < m.faces.size(); ++fi) {
+                const auto& f = m.faces[fi];
+                uint32_t a = f[0] + v_offset, b = f[1] + v_offset, c = f[2] + v_offset;
+                oss << "f " << a << "//" << a << " " << b << "//" << b << " " << c << "//" << c << "\n";
+            }
+        } else {
+            for (const auto& f : m.faces) {
+                uint32_t a = f[0] + v_offset, b = f[1] + v_offset, c = f[2] + v_offset;
+                oss << "f " << a << "//" << a << " " << b << "//" << b << " " << c << "//" << c << "\n";
+            }
         }
         v_offset += static_cast<uint32_t>(m.positions.size());
     }
