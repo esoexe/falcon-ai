@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 450" width="1200" height="450">
+  <defs>
+    <linearGradient id="archBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090b10"/>
+      <stop offset="100%" stop-color="#0f131d"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="450" rx="14" fill="url(#archBg)" stroke="#242938" stroke-width="2"/>
+
+  <!-- Header -->
+  <text x="32" y="38" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="18" font-weight="800" fill="#f8fafc">Falcon AI Studio v3.0 — Zero-Python, Zero-Docker C++20 System Architecture</text>
+  <text x="1168" y="38" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5" fill="#10b981" text-anchor="end">Single Static Binary · OpenMP SIMD · Runs on CPU or GPU</text>
+  <line x1="32" y1="52" x2="1168" y2="52" stroke="#1e2433" stroke-width="1"/>
+
+  <!-- COLUMN 1: INPUTS & AI ROUTER -->
+  <g transform="translate(32, 70)">
+    <rect width="246" height="350" rx="10" fill="#121621" stroke="#283044"/>
+    <text x="16" y="26" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#38bdf8">01 · INPUTS &amp; UNIVERSAL ROUTER</text>
+
+    <rect x="14" y="42" width="218" height="58" rx="7" fill="#0c0f17" stroke="#22293a"/>
+    <text x="24" y="62" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">Multimodal Studio Inputs</text>
+    <text x="24" y="80" font-family="ui-monospace, monospace" font-size="10.2" fill="#94a3b8">Text · 1-4 Photos · Sketch</text>
+    <text x="24" y="93" font-family="ui-monospace, monospace" font-size="10.2" fill="#94a3b8">External .GLB/.OBJ/.STL/.PLY</text>
+
+    <rect x="14" y="112" width="218" height="76" rx="7" fill="#0c0f17" stroke="#22293a"/>
+    <text x="24" y="132" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">98-Provider AI Router</text>
+    <text x="24" y="150" font-family="ui-monospace, monospace" font-size="10.2" fill="#10b981">68 Free (5 Keyless + 52 Tier)</text>
+    <text x="24" y="164" font-family="ui-monospace, monospace" font-size="10.2" fill="#38bdf8">11 Local: Ollama / LM Studio</text>
+    <text x="24" y="178" font-family="ui-monospace, monospace" font-size="10.2" fill="#94a3b8">+ Custom OpenAI /v1 Endpoints</text>
+
+    <rect x="14" y="200" width="218" height="66" rx="7" fill="#0c0f17" stroke="#22293a"/>
+    <text x="24" y="220" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">Hardware Auto-Calibrator</text>
+    <text x="24" y="238" font-family="ui-monospace, monospace" font-size="10.2" fill="#94a3b8">CPU Threads · RAM · VRAM Probe</text>
+    <text x="24" y="253" font-family="ui-monospace, monospace" font-size="10.2" fill="#10b981">Zero-GPU Adaptive 104³-136³ SDF</text>
+
+    <rect x="14" y="278" width="218" height="58" rx="7" fill="#0c0f17" stroke="#22293a"/>
+    <text x="24" y="298" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">Live 3D Laser Setup.exe</text>
+    <text x="24" y="315" font-family="ui-monospace, monospace" font-size="10.2" fill="#38bdf8">Per-Pixel WebGL Z-Slice Forge</text>
+    <text x="24" y="328" font-family="ui-monospace, monospace" font-size="10.2" fill="#94a3b8">User-Space · Portable Mode</text>
+  </g>
+
+  <!-- COLUMN 2: 6-AGENT SWARM & CORE C++20 3D PILLARS -->
+  <g transform="translate(308, 70)">
+    <rect width="548" height="350" rx="10" fill="#121621" stroke="#2d3952"/>
+    <text x="18" y="26" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#f59e0b">02 · PURE C++20 + OPENMP 6-AGENT SWARM &amp; 7-PILLAR 3D ENGINE</text>
+
+    <!-- Row 1 -->
+    <rect x="16" y="42" width="252" height="66" rx="7" fill="#0c0f17" stroke="#243047"/>
+    <text x="26" y="61" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">4-Draft Grid &amp; Agent Swarm</text>
+    <text x="26" y="78" font-family="ui-monospace, monospace" font-size="10" fill="#94a3b8">agent_swarm.hpp · llm_router.hpp</text>
+    <text x="26" y="94" font-family="ui-monospace, monospace" font-size="10" fill="#38bdf8">4 Parallel Previews in ~670ms</text>
+
+    <rect x="280" y="42" width="252" height="66" rx="7" fill="#0c0f17" stroke="#243047"/>
+    <text x="290" y="61" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">SDF CSG + SIREN Organic Field</text>
+    <text x="290" y="78" font-family="ui-monospace, monospace" font-size="10" fill="#94a3b8">sdf_compiler.hpp · neural_organic.hpp</text>
+    <text x="290" y="94" font-family="ui-monospace, monospace" font-size="10" fill="#10b981">Hard-Surface + C² Portrait Busts</text>
+
+    <!-- Row 2 -->
+    <rect x="16" y="120" width="252" height="66" rx="7" fill="#0c0f17" stroke="#243047"/>
+    <text x="26" y="139" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">Multi-View Photo Visual Hull</text>
+    <text x="26" y="156" font-family="ui-monospace, monospace" font-size="10" fill="#94a3b8">multiview_3d.hpp · image_to_3d.hpp</text>
+    <text x="26" y="172" font-family="ui-monospace, monospace" font-size="10" fill="#38bdf8">Front/Side/Back/Top + RGB Bake</text>
+
+    <rect x="280" y="120" width="252" height="66" rx="7" fill="#0c0f17" stroke="#243047"/>
+    <text x="290" y="139" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">Garland-Heckbert Quad QEM</text>
+    <text x="290" y="156" font-family="ui-monospace, monospace" font-size="10" fill="#94a3b8">smart_remesh.hpp · mesh_importer.hpp</text>
+    <text x="290" y="172" font-family="ui-monospace, monospace" font-size="10" fill="#10b981">100–300k Faces · True 4-Gon OBJ</text>
+
+    <!-- Row 3 -->
+    <rect x="16" y="198" width="252" height="66" rx="7" fill="#0c0f17" stroke="#243047"/>
+    <text x="26" y="217" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">4K Ultra PBR + 3D Region Brush</text>
+    <text x="26" y="234" font-family="ui-monospace, monospace" font-size="10" fill="#94a3b8">pbr_textures.hpp · Albedo/ORM/Nrm</text>
+    <text x="26" y="250" font-family="ui-monospace, monospace" font-size="10" fill="#f59e0b">256 / 1K / 2K / 4K + Cavity AO</text>
+
+    <rect x="280" y="198" width="252" height="66" rx="7" fill="#0c0f17" stroke="#243047"/>
+    <text x="290" y="217" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">Volumetric Skin + 24 Clips</text>
+    <text x="290" y="234" font-family="ui-monospace, monospace" font-size="10" fill="#94a3b8">rig_animator.hpp · JOINTS_0/WEIGHTS_0</text>
+    <text x="290" y="250" font-family="ui-monospace, monospace" font-size="10" fill="#10b981">17 Joints · Bipedal &amp; Quadruped</text>
+
+    <!-- Row 4 -->
+    <rect x="16" y="276" width="516" height="58" rx="7" fill="#0c0f17" stroke="#243047"/>
+    <text x="26" y="296" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">6-Agent Playable 60-FPS 3D Game Studio + Print/CAD Repair Engine</text>
+    <text x="26" y="314" font-family="ui-monospace, monospace" font-size="10.2" fill="#94a3b8">game_engine_builder.hpp (RPG / Mecha / GT Racing / Space Dogfight) + 2-Manifold Millimeter CAD Scaler</text>
+  </g>
+
+  <!-- COLUMN 3: EXPORTS, SLICERS & ZERO-PYTHON PLUGINS -->
+  <g transform="translate(886, 70)">
+    <rect width="282" height="350" rx="10" fill="#121621" stroke="#283044"/>
+    <text x="16" y="26" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#10b981">03 · PRO EXPORTS &amp; LIVE-LINKS</text>
+
+    <rect x="14" y="42" width="254" height="90" rx="7" fill="#0c0f17" stroke="#22293a"/>
+    <text x="24" y="62" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">8 Native 3D &amp; AR Formats</text>
+    <text x="24" y="80" font-family="ui-monospace, monospace" font-size="10.2" fill="#38bdf8">.FBX (7.4 Skin + 24 Anim Clips)</text>
+    <text x="24" y="95" font-family="ui-monospace, monospace" font-size="10.2" fill="#10b981">.USDZ (64-Byte Aligned VisionOS)</text>
+    <text x="24" y="110" font-family="ui-monospace, monospace" font-size="10.2" fill="#94a3b8">.GLB · .OBJ (Quads) · .STL · .3MF · .PLY</text>
+
+    <rect x="14" y="144" width="254" height="68" rx="7" fill="#0c0f17" stroke="#22293a"/>
+    <text x="24" y="164" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">1-Click 3D Slicer Bridge</text>
+    <text x="24" y="182" font-family="ui-monospace, monospace" font-size="10.2" fill="#f59e0b">Bambu · Orca · Prusa · Cura</text>
+    <text x="24" y="197" font-family="ui-monospace, monospace" font-size="10.2" fill="#94a3b8">Elegoo · Creality Print URI</text>
+
+    <rect x="14" y="224" width="254" height="112" rx="7" fill="#0c0f17" stroke="#22293a"/>
+    <text x="24" y="244" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">5 Zero-Python Engine Plugins</text>
+    <text x="24" y="263" font-family="ui-monospace, monospace" font-size="10.2" fill="#38bdf8">• Unity 6 / 2022 LTS (C#)</text>
+    <text x="24" y="278" font-family="ui-monospace, monospace" font-size="10.2" fill="#38bdf8">• Unreal Engine 5.4/5.5 (C++)</text>
+    <text x="24" y="293" font-family="ui-monospace, monospace" font-size="10.2" fill="#38bdf8">• Godot 4 (@tool GDScript)</text>
+    <text x="24" y="308" font-family="ui-monospace, monospace" font-size="10.2" fill="#38bdf8">• Roblox Studio (Luau)</text>
+    <text x="24" y="323" font-family="ui-monospace, monospace" font-size="10.2" fill="#10b981">• falcon_dcc_bridge (C++20)</text>
+  </g>
+
+  <!-- Connector Arrows -->
+  <line x1="278" y1="245" x2="305" y2="245" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="856" y1="245" x2="883" y2="245" stroke="#10b981" stroke-width="2" marker-end="url(#arrowGreen)"/>
+</svg>

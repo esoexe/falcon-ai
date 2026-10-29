@@ -1,28 +1,45 @@
 # Changelog
 
-All notable changes to **Falcon AI** are documented in this file.
+All notable changes to **Falcon AI Studio** are documented in this file.
+
+## [3.0.0] - 2026-10-29
+
+### Added — Rebuilt Live WebGL 3D Laser-Sintering `Setup.exe` UI/UX
+- **Per-Pixel WebGL 3D Clearcoat PBR & Laser-Sintering Viewport (`desktop/installer/setup.html`)**:
+  - Rebuilt the Windows/Desktop installer from the ground up in the **OpenCode `v3.0` Obsidian & Daylight** design language (`1080×680` frameless window, zero scrollbars, zero text clipping).
+  - Embedded a zero-dependency **WebGL 3D fragment shader** featuring 4 smooth high-poly sculpted showcase meshes (`Aero Widebody GT Hypercar`, `Articulated Cyber Mecha`, `SIREN Anatomical Bust`, and `Valkyrie Starfighter`), drag-to-orbit + scroll-to-zoom camera, `Laser` / `Quad` / `Solid` shading modes, and Dark/Daylight theme toggle.
+  - **Live Z-Slice Materialization**: Synchronizes the 3D laser scan plane (`uLaserY`) directly with `installer_engine.js` extraction progress (`VFS`, `CORE`, `AI-POOL`, `PLUGINS`, `3D-PACK`, `SHORTCUT`), plus **Initial Workspace View** handoff (`/?launch=model|game|providers`) and **1-Click Portable Mode**.
+
+### Added — Full 7-Pillar Meshy AI Parity Engine (`C++20` + `WebGL2`)
+- **4-Candidate Parallel Fast Draft Grid & Implicit `SIREN` Organic Sculptor (`neural_organic.hpp`)**:
+  - `POST /api/generate/draft-grid` generates 4 varied candidate previews in `~670 ms` with 1-click `Refine Ultra` promotion.
+  - Added smooth `C²` sinusoidal harmonic + anatomical metaball sculpting for organic busts, characters, and creatures.
+- **1–4 Photo Multi-View Visual Hull & External Mesh Importer (`multiview_3d.hpp`, `mesh_importer.hpp`)**:
+  - `POST /api/generate/multiview` carves 3D geometry from `Front`, `Side`, `Back`, and `Top` photos with normal-weighted RGB projection.
+  - `POST /api/mesh/import` imports external `.GLB`, `.OBJ`, `.STL`, and `.PLY` meshes for retexturing, quad remeshing, or auto-rigging.
+- **Garland-Heckbert `4×4` QEM Smart Quad Remesher (`smart_remesh.hpp`)**:
+  - `POST /api/mesh/remesh` decimates or retopologizes meshes anywhere from `100` to `300,000` target faces and extracts true 4-gon quad topology (`QuadMeshData` + quad-preserving `.OBJ` export).
+- **`4K Ultra` OpenMP PBR Texture Baker & Live 3D Region Brush (`pbr_textures.hpp`)**:
+  - Upgraded procedural PBR baking to `256`, `1024 (1K)`, `2048 (2K HD)`, and `4096 (4K Ultra)` Albedo/ORM/Tangent-Normal maps + AI Prompt-to-PBR (`POST /api/mesh/retexture`) and interactive 3D spherical-falloff region healing (`POST /api/mesh/paint-region`).
+- **Volumetric 4-Bone Auto-Rigger & 24-Clip Motion Library (`rig_animator.hpp`)**:
+  - `POST /api/mesh/rig-animate` computes normalized `JOINTS_0` / `WEIGHTS_0` skinning across 17 joints (bipedal & quadruped) and embeds `24` categorized motion clips (`Locomotion`, `Combat`, `Emote`, `Aerial`) playable directly inside `Viewport3D.jsx`.
+- **Autodesk `.FBX` 7.4, 64-Byte Aligned Apple `.USDZ`, Slicer Bridge & 5 Zero-Python Engine Plugins (`exporters_pro.hpp`, `plugins/`)**:
+  - Added native `.FBX` 7.4 (`Skin` + `AnimationStack`), VisionOS/iOS 64-byte aligned `.USDZ`, 1-click URI launch for 6 slicers (`Bambu`, `Orca`, `Prusa`, `Cura`, `Elegoo`, `Creality`), and 5 official Zero-Python Live-Link plugins (`Unity C#`, `UE5 C++`, `Godot 4 GDScript`, `Roblox Luau`, and compiled `bin/falcon_dcc_bridge[.exe]`).
+
+---
 
 ## [2.1.0] - 2026-10-29
 
 ### Added
 - **Minimalist OpenCode Desktop UI/UX (`frontend/src/App.jsx`, `frontend/src/styles.css`)**:
-  - Redesigned the entire Studio interface around OpenCode Desktop's calm, distraction-free monochrome layout (`#121010` warm obsidian dark & `#fcfafa` warm paper light themes).
-  - Clean 2-pane default workspace: left session rail (`3D Models` / `3D Games`, `+ New`, active model/router dock) + full-bleed 3D/Game canvas + centered floating **OpenCode Prompt Composer** (`Build / Edit / Game / Plan` mode pill, live `Provider / Router` picker pill, `+ Image` 1-click upload, quality selector, and `/` slash commands).
-  - Converted the Studio Inspector (`Parts`, `Material`, `Image/Sketch`, `Print/CAD`, `Rig`, `Swarm`, `JSON`) into an on-demand slide-in drawer (`Ctrl+I`, closed by default) and consolidated exports into a single `Export ▾` menu (`.glb`, `.3mf`, `.stl`, `.obj`, `.cs`, `.html`).
+  - Redesigned the Studio interface around OpenCode Desktop's calm monochrome layout, on-demand slide-in Inspector drawer (`Ctrl+I`), and floating Prompt Composer.
 - **Universal Provider & Custom Endpoint Settings (`HardwareModal.jsx` & `provider_catalog.hpp`)**:
-  - Dedicated 2-column **Settings & Providers** modal (`Ctrl+,`, `/providers`, sidebar dock, or composer pill).
-  - **Custom OpenAI-Compatible Providers (`add_custom` / `delete_custom`)**: Add unlimited custom `/v1` endpoints (`Name`, `Base URL`, `API Key`, `Model ID`) persisted in `workspace_providers.json` and prioritized in multi-agent routing.
-  - **1-Click Quick Connect & Searchable 98-Provider Pool**: Inline API key + editable model ID setup across `68` free providers (`5` No-Key, `52` Free-Key, `11` Local) and `30` opt-in paid providers.
-  - **Local AI Runtime Hub**: Dedicated local configuration & live port scanner for `Ollama` (`:11434`), `LM Studio` (`:1234`), `llama.cpp` (`:8080`), `vLLM` (`:8001`), and `ComfyUI` (`:8188`).
-- **Updated Windows Installer (`Falcon-AI-Setup-2.1.0-x64.exe`)**:
-  - Updated live-animated 60-FPS 3D Hologram Setup Wizard and bundled static Windows x64 `falcon_server.exe` + embedded `v2.1` OpenCode Web VFS.
+  - Unified `Settings & Providers` modal (`Ctrl+,`) supporting `68` free/local providers, `30` opt-in paid providers, unlimited custom `/v1` OpenAI-compatible endpoints, and live local port scanning (`Ollama`, `LM Studio`, `llama.cpp`, `vLLM`, `ComfyUI`).
+
+---
 
 ## [2.0.0] - 2026-10-28
 
 ### Added
-- **6-Agent Autonomous 3D Swarm (`agent_swarm.hpp`)**: Collaborating `@lead-architect`, `@kitbash-detailer`, `@sculptor-csg`, `@material-pbr`, `@rig-kinematics`, and `@qa-inspector` pipeline with per-agent execution trace and dynamic natural-language kitbashing.
-- **Playable 60-FPS 3D Game Creator Engine (`GameViewport.jsx` & `game_engine_builder.hpp`)**: In-app 3D game creation, live gameplay (`action_rpg`, `mecha_shooter`, `hypercar_racing`, `space_dogfight`), live world mutation, standalone `.HTML` game export, and Unity C# (`.cs`) export.
-- **98-Provider AI Registry (`provider_catalog.hpp`)**: 68 free providers (`5` No-Key Instant-On, `52` Free-Key, `11` Local On-Computer) + `30` Paid providers (strictly OFF by default).
-- **Embedded 256×256 glTF 2.0 PBR Textures (`pbr_textures.hpp`)**: Native C++20 Albedo, ORM, and Tangent-Space Normal synthesis across 13 material finishes + 2-pass smoothed Laplacian cavity AO.
-- **Pure Dual-Platform C++20 Backend (`bin/falcon_server` & `bin/falcon_server.exe`)**: Native Linux POSIX + static Windows x64 (`Winsock2`, `WinHTTP` TLS, `GDI+`, static `zlib` PNG encoder, and `OpenMP` parallel Surface-Nets) with zero Python and zero Docker dependencies.
-- **Word-Boundary Prompt Router & Keyless Cloud AI Blueprint Synthesizer (`llm_router.hpp`)**: Exact word-boundary matching, sculpted vehicle/creature/prop archetypes, and zero-key cloud AI blueprint synthesis.
+- **6-Agent Autonomous 3D Swarm (`agent_swarm.hpp`)** & **Playable 60-FPS 3D Game Creator (`game_engine_builder.hpp`)**.
+- **Pure Dual-Platform C++20 Backend (`bin/falcon_server` & `bin/falcon_server.exe`)** with zero Python and zero Docker dependencies.
