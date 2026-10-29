@@ -139,6 +139,19 @@ export default function App() {
     setSettingsOpen(true);
   }, []);
 
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get('launch');
+      if (q === 'game') {
+        setStudioDomain('game');
+        setAgentMode('game');
+      } else if (q === 'providers') {
+        setSettingsSection('connect');
+        setSettingsOpen(true);
+      }
+    } catch {}
+  }, []);
+
   const pushLog = useCallback((role, text) => {
     setActivityLog((prev) => [...prev.slice(-24), { role, text }]);
   }, []);

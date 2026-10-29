@@ -2,8 +2,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('falconDesktop', {
   isDesktop: true,
+  isElectron: true,
   appName: 'Falcon AI',
-  version: '2.1.0',
+  version: '3.0.0',
   platform: process.platform,
   minimize: () => ipcRenderer.send('falcon:window-minimize'),
   maximize: () => ipcRenderer.send('falcon:window-maximize'),

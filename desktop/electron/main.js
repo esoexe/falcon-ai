@@ -138,13 +138,13 @@ async function createFalconWindow() {
   const showSetup = shouldOpenAnimatedSetup();
 
   mainWindow = new BrowserWindow({
-    width: showSetup ? 1040 : 1440,
-    height: showSetup ? 650 : 900,
-    minWidth: showSetup ? 920 : 980,
-    minHeight: showSetup ? 600 : 640,
-    title: showSetup ? 'Falcon AI Setup' : 'Falcon AI',
+    width: showSetup ? 1080 : 1440,
+    height: showSetup ? 680 : 900,
+    minWidth: showSetup ? 960 : 980,
+    minHeight: showSetup ? 620 : 640,
+    title: showSetup ? 'Falcon AI v3.0 Setup' : 'Falcon AI Studio v3.0',
     frame: false,
-    backgroundColor: '#131010',
+    backgroundColor: '#0b0c10',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -186,10 +186,13 @@ ipcMain.on('falcon:window-close', () => mainWindow?.close());
 ipcMain.handle('falcon:installer-defaults', () => {
   const cpus = os.cpus() || [];
   return {
+    version: '3.0.0',
+    platform: process.platform,
+    arch: process.arch,
     defaultDir: getDefaultInstallDir(),
-    cpu: (cpus[0]?.model || 'x86_64 Processor').trim().slice(0, 28),
-    cores: cpus.length || 4,
-    ramGb: Math.max(1, Math.round(os.totalmem() / (1024 ** 3))),
+    cpu: (cpus[0]?.model || 'x86_64 Multi-Core Processor').trim().slice(0, 34),
+    cores: cpus.length || 8,
+    ramGb: Math.max(2, Math.round(os.totalmem() / (1024 ** 3))),
   };
 });
 
@@ -218,14 +221,15 @@ ipcMain.handle('falcon:installer-run', async (_ev, opts) => {
   });
 });
 
-ipcMain.handle('falcon:installer-finish', async () => {
+ipcMain.handle('falcon:installer-finish', async (_ev, opts) => {
   const port = await ensureBackendEngine();
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.setMinimumSize(980, 640);
     mainWindow.setSize(1440, 900, true);
     mainWindow.center();
-    mainWindow.setTitle('Falcon AI');
-    await mainWindow.loadURL(`http://127.0.0.1:${port}`);
+    mainWindow.setTitle('Falcon AI Studio v3.0');
+    const mode = opts?.launchMode ? `?launch=${encodeURIComponent(opts.launchMode)}` : '';
+    await mainWindow.loadURL(`http://127.0.0.1:${port}/${mode}`);
   }
   return { ok: true };
 });

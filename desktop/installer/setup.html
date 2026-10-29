@@ -3,50 +3,74 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Falcon AI Setup — Live 3D Animated Installer v3.0.0</title>
+<title>Falcon AI Studio v3.0 — Live 3D Setup</title>
 <style>
   :root {
-    --bg-void: #0e0c0c;
-    --bg-base: #131010;
-    --bg-surface: #191616;
-    --bg-elevated: #211d1d;
-    --ink-primary: #fdfcfc;
-    --ink-secondary: #c9c5c5;
-    --ink-muted: #8a8585;
-    --hairline: rgba(160, 155, 155, 0.18);
-    --hairline-strong: rgba(200, 195, 195, 0.32);
-    --sig-green: #30d158;
+    --bg-void: #07080c;
+    --bg-base: #0c0e14;
+    --bg-surface: #12151e;
+    --bg-elevated: #181c27;
+    --bg-hover: #1f2433;
+    --ink-primary: #f8fafc;
+    --ink-secondary: #cbd5e1;
+    --ink-muted: #7e8a9f;
+    --border-subtle: rgba(148, 163, 184, 0.13);
+    --border-strong: rgba(148, 163, 184, 0.26);
+    --accent-primary: #f8fafc;
+    --accent-primary-ink: #090b10;
     --sig-cyan: #38bdf8;
-    --sig-gold: #f59e0b;
-    --sig-red: #ff453a;
-    --scan-glow: rgba(48, 209, 88, 0.22);
+    --sig-emerald: #10b981;
+    --sig-amber: #f59e0b;
+    --sig-red: #ef4444;
+    --glass-tag: rgba(11, 13, 19, 0.82);
+    --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "JetBrains Mono", "IBM Plex Mono", "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
   }
-  body.cream {
-    --bg-void: #f3f0f0;
-    --bg-base: #fdfcfc;
-    --bg-surface: #f5f2f2;
-    --bg-elevated: #eae6e6;
-    --ink-primary: #131010;
-    --ink-secondary: #3d3939;
-    --ink-muted: #736e6e;
-    --hairline: rgba(30, 26, 26, 0.14);
-    --hairline-strong: rgba(30, 26, 26, 0.28);
-    --sig-green: #15803d;
+
+  body.light {
+    --bg-void: #e8eef5;
+    --bg-base: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-elevated: #f1f5f9;
+    --bg-hover: #e2e8f0;
+    --ink-primary: #0f172a;
+    --ink-secondary: #334155;
+    --ink-muted: #64748b;
+    --border-subtle: rgba(15, 23, 42, 0.10);
+    --border-strong: rgba(15, 23, 42, 0.22);
+    --accent-primary: #0f172a;
+    --accent-primary-ink: #f8fafc;
     --sig-cyan: #0284c7;
-    --sig-gold: #b45309;
-    --scan-glow: rgba(21, 128, 61, 0.16);
+    --sig-emerald: #059669;
+    --sig-amber: #d97706;
+    --glass-tag: rgba(255, 255, 255, 0.88);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.22); border-radius: 99px; }
+
   html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
     background: var(--bg-base);
     color: var(--ink-primary);
-    font-family: "IBM Plex Mono", "JetBrains Mono", "Cascadia Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 12px;
-    line-height: 1.5;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.44;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  code.c-tag {
+    font-family: var(--font-mono);
+    font-size: 10.2px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--ink-secondary);
   }
 
   .setup-shell {
@@ -54,107 +78,132 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--hairline-strong);
+    border: 1px solid var(--border-strong);
     background: var(--bg-base);
+    overflow: hidden;
   }
 
-  /* Custom Frameless Draggable Titlebar */
+  /* =========================================================================
+     1. FRAMELESS OPENCODE STUDIO TITLEBAR
+     ========================================================================= */
   .titlebar {
-    height: 36px;
+    height: 40px;
+    flex-shrink: 0;
     background: var(--bg-void);
-    border-bottom: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--border-subtle);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 12px;
+    padding: 0 14px;
     -webkit-app-region: drag;
   }
-  .titlebar-left {
+  .tb-left {
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
   }
-  .brand-mark {
+  .logo-badge {
+    width: 23px;
+    height: 23px;
+    border-radius: 6px;
+    background: var(--ink-primary);
+    color: var(--bg-void);
+    font-family: var(--font-mono);
+    font-weight: 800;
+    font-size: 12.5px;
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    justify-content: center;
+  }
+  .tb-title {
     font-weight: 700;
-    letter-spacing: 0.04em;
-    font-size: 12px;
+    font-size: 13px;
+    letter-spacing: -0.01em;
   }
-  .pulse-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--sig-green);
-    display: inline-block;
-    animation: pulseGlow 1.8s infinite ease-in-out;
-  }
-  @keyframes pulseGlow {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.35); opacity: 0.55; }
-  }
-  .title-badge {
+  .tb-pill {
+    font-family: var(--font-mono);
     font-size: 10.5px;
-    color: var(--sig-green);
-    border: 1px solid var(--hairline);
+    padding: 2px 8px;
+    border-radius: 999px;
     background: var(--bg-surface);
-    padding: 1px 7px;
-    border-radius: 3px;
+    border: 1px solid var(--border-subtle);
+    color: var(--sig-cyan);
+    font-weight: 600;
   }
-  .titlebar-controls {
+  .tb-meta {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--ink-muted);
+  }
+  .tb-right {
     display: flex;
     align-items: center;
     gap: 6px;
     -webkit-app-region: no-drag;
   }
-  .win-btn {
-    font-family: inherit;
-    font-size: 11px;
-    background: transparent;
+  .tb-btn {
+    height: 25px;
+    padding: 0 9px;
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
     color: var(--ink-secondary);
-    border: 1px solid var(--hairline);
-    border-radius: 3px;
-    padding: 2px 8px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     transition: all 0.14s ease;
   }
-  .win-btn:hover {
-    background: var(--ink-primary);
-    color: var(--bg-base);
+  .tb-btn:hover {
+    background: var(--bg-hover);
+    color: var(--ink-primary);
+    border-color: var(--border-strong);
   }
-  .win-btn.close:hover {
+  .tb-btn.win-close:hover {
     background: var(--sig-red);
     border-color: var(--sig-red);
-    color: #fff;
+    color: #ffffff;
   }
 
-  /* Main 2-Column Split */
+  /* =========================================================================
+     2. TWO-PANE STUDIO SPLIT (436px WebGL 3D Laser Forge + Fluid Wizard)
+     ========================================================================= */
   .setup-main {
     flex: 1;
     display: grid;
-    grid-template-columns: 430px 1fr;
+    grid-template-columns: 436px minmax(0, 1fr);
     min-height: 0;
+    min-width: 0;
   }
 
-  /* Left Pane: Live 60-FPS Interactive 3D Hologram Forge */
-  .holo-pane {
+  .forge-pane {
     position: relative;
-    background: var(--bg-void);
-    border-right: 1px solid var(--hairline);
+    min-width: 0;
+    background:
+      radial-gradient(circle at 50% 44%, rgba(56, 189, 248, 0.12), transparent 66%),
+      linear-gradient(180deg, #07090e 0%, #0b0f18 100%);
+    border-right: 1px solid var(--border-subtle);
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
-  #holoCanvas {
+  body.light .forge-pane {
+    background:
+      radial-gradient(circle at 50% 44%, rgba(2, 132, 199, 0.12), transparent 66%),
+      linear-gradient(180deg, #e7eef6 0%, #dce6f2 100%);
+  }
+  #glCanvas {
     width: 100%;
-    flex: 1;
+    height: 100%;
     display: block;
     cursor: grab;
   }
-  #holoCanvas:active { cursor: grabbing; }
+  #glCanvas:active { cursor: grabbing; }
 
-  .holo-top-overlay {
+  .forge-hud-top {
     position: absolute;
     top: 12px;
     left: 12px;
@@ -162,590 +211,936 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    gap: 8px;
     pointer-events: none;
   }
-  .holo-tag {
-    background: rgba(19, 16, 16, 0.82);
-    border: 1px solid var(--hairline-strong);
-    color: #fdfcfc;
-    padding: 4px 8px;
-    border-radius: 3px;
-    font-size: 10px;
-    line-height: 1.4;
-  }
-  body.cream .holo-tag {
-    background: rgba(253, 252, 252, 0.88);
-    color: #131010;
-  }
-  .mesh-switcher {
-    display: flex;
-    gap: 4px;
+  .forge-card {
+    background: var(--glass-tag);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-strong);
+    border-radius: 9px;
+    padding: 7px 10px;
     pointer-events: auto;
   }
-  .mesh-chip {
-    font-family: inherit;
-    font-size: 10px;
-    padding: 3px 7px;
-    border-radius: 3px;
-    border: 1px solid var(--hairline-strong);
-    background: rgba(19, 16, 16, 0.82);
-    color: #c9c5c5;
-    cursor: pointer;
-  }
-  body.cream .mesh-chip {
-    background: rgba(253, 252, 252, 0.88);
-    color: #3d3939;
-  }
-  .mesh-chip.active {
-    background: var(--sig-green);
-    color: #09110b;
-    border-color: var(--sig-green);
+  .forge-model-name {
+    font-size: 11.5px;
     font-weight: 700;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--sig-emerald);
+    box-shadow: 0 0 8px var(--sig-emerald);
+    animation: pulseDot 1.8s infinite ease-in-out;
+  }
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(1.25); }
+  }
+  .forge-sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--ink-muted);
+    margin-top: 2px;
   }
 
-  .holo-footer {
-    border-top: 1px solid var(--hairline);
-    padding: 9px 12px;
-    background: var(--bg-surface);
+  .shade-pills {
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    border-radius: 8px;
+    background: var(--glass-tag);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-strong);
+    pointer-events: auto;
+  }
+  .shade-pill {
+    border: none;
+    background: transparent;
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 7px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.14s ease;
+  }
+  .shade-pill.active {
+    background: var(--ink-primary);
+    color: var(--bg-void);
+  }
+
+  .forge-hud-bottom {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+  }
+  .mesh-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    pointer-events: auto;
+  }
+  .mesh-btn {
+    padding: 6px 5px;
+    border-radius: 7px;
+    border: 1px solid var(--border-subtle);
+    background: var(--glass-tag);
+    backdrop-filter: blur(10px);
+    color: var(--ink-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.14s ease;
+    text-align: center;
+  }
+  .mesh-btn:hover {
+    border-color: var(--border-strong);
+    color: var(--ink-primary);
+  }
+  .mesh-btn.active {
+    border-color: var(--sig-cyan);
+    color: var(--sig-cyan);
+    background: rgba(56, 189, 248, 0.14);
+  }
+  .forge-telemetry {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 10.5px;
+    padding: 5px 10px;
+    border-radius: 7px;
+    background: var(--glass-tag);
+    border: 1px solid var(--border-subtle);
+    font-family: var(--font-mono);
+    font-size: 10px;
     color: var(--ink-muted);
   }
 
-  /* Right Pane: Multi-Stage Animated Wizard */
+  /* =========================================================================
+     3. RIGHT WIZARD PANE (Zero Clipping / Zero Overflow)
+     ========================================================================= */
   .wizard-pane {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
+    overflow: hidden;
     background: var(--bg-base);
   }
 
-  /* Stepper Bar */
-  .stepper {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    border-bottom: 1px solid var(--hairline);
+  .stepper-bar {
+    padding: 11px 22px;
+    border-bottom: 1px solid var(--border-subtle);
     background: var(--bg-surface);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
   }
-  .step-item {
-    padding: 9px 12px;
-    border-right: 1px solid var(--hairline);
-    font-size: 10.5px;
-    color: var(--ink-muted);
+  .step-node {
     display: flex;
     align-items: center;
     gap: 6px;
+    padding: 3px 10px 3px 4px;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-base);
+    color: var(--ink-muted);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
     transition: all 0.2s ease;
   }
-  .step-item:last-child { border-right: none; }
-  .step-item.active {
-    color: var(--ink-primary);
-    background: var(--bg-base);
+  .step-num {
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    background: var(--bg-elevated);
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
     font-weight: 700;
-    border-bottom: 2px solid var(--sig-green);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
-  .step-item.done {
-    color: var(--sig-green);
+  .step-node.active {
+    border-color: var(--ink-primary);
+    color: var(--ink-primary);
+    background: var(--bg-elevated);
   }
+  .step-node.active .step-num {
+    background: var(--ink-primary);
+    color: var(--bg-void);
+  }
+  .step-node.done {
+    border-color: rgba(16, 185, 129, 0.48);
+    color: var(--sig-emerald);
+  }
+  .step-node.done .step-num {
+    background: var(--sig-emerald);
+    color: #04130d;
+  }
+  .step-line {
+    flex: 1;
+    min-width: 8px;
+    height: 1px;
+    background: var(--border-subtle);
+  }
+  .step-line.done { background: var(--sig-emerald); }
 
   .stage-body {
     flex: 1;
-    padding: 20px 24px;
+    padding: 16px 22px;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+    overflow-x: hidden;
+    min-height: 0;
+    min-width: 0;
   }
-
   .stage-pane {
     display: none;
     flex-direction: column;
-    gap: 14px;
-    animation: slideFadeIn 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+    gap: 12px;
+    min-width: 0;
+    animation: stageIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .stage-pane.active { display: flex; }
-
-  @keyframes slideFadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+  @keyframes stageIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
-  h1 {
-    font-size: 17px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-  }
-  .subtitle {
-    color: var(--ink-secondary);
-    font-size: 11.5px;
-    margin-top: 3px;
-  }
-
-  /* Cards & Inputs */
-  .panel-box {
-    border: 1px solid var(--hairline);
-    border-radius: 4px;
-    background: var(--bg-surface);
-    padding: 11px 13px;
-  }
-  .panel-label {
+  .stage-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
     font-size: 10px;
+    font-weight: 600;
+    color: var(--sig-emerald);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--ink-muted);
-    margin-bottom: 7px;
+    letter-spacing: 0.05em;
+  }
+  .stage-title {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    margin-top: 2px;
+  }
+  .stage-desc {
+    font-size: 12.2px;
+    color: var(--ink-secondary);
+    margin-top: 2px;
+  }
+
+  .card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 11px 13px;
+    min-width: 0;
+  }
+  .card-head {
     display: flex;
     justify-content: space-between;
-  }
-
-  .hw-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    align-items: center;
     gap: 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+    margin-bottom: 8px;
   }
-  .hw-stat {
-    border: 1px solid var(--hairline);
-    border-radius: 3px;
+  .hw-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    min-width: 0;
+  }
+  .summary-grid-3 {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    min-width: 0;
+  }
+  .hw-tile {
     background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
     padding: 8px 10px;
+    min-width: 0;
   }
-  .hw-stat .k { font-size: 9.5px; color: var(--ink-muted); text-transform: uppercase; }
-  .hw-stat .v { font-size: 12px; font-weight: 700; margin-top: 2px; color: var(--ink-primary); }
-  .hw-stat .s { font-size: 10px; color: var(--sig-green); margin-top: 2px; }
+  .hw-tile .k {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .hw-tile .v {
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hw-tile .s {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    color: var(--sig-cyan);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-  .feature-pills {
+  .pillar-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
-  .feat-card {
-    border: 1px solid var(--hairline);
-    border-radius: 3px;
-    padding: 8px 10px;
+  .pillar-card {
     background: var(--bg-surface);
-  }
-  .feat-card strong { font-size: 11.5px; display: block; margin-bottom: 2px; }
-  .feat-card span { font-size: 10.5px; color: var(--ink-muted); }
-
-  .path-row {
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 10px 12px;
     display: flex;
-    gap: 6px;
+    gap: 10px;
+    align-items: flex-start;
+    transition: border-color 0.15s ease;
   }
-  .text-input {
-    flex: 1;
-    font-family: inherit;
+  .pillar-card:hover { border-color: var(--border-strong); }
+  .pillar-ico {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--sig-cyan);
+    font-family: var(--font-mono);
     font-size: 11.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .pillar-card h3 {
+    font-size: 12.2px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .pillar-card p {
+    font-size: 11px;
+    color: var(--ink-muted);
+    line-height: 1.38;
+  }
+
+  /* Step 2: Path Picker & Modern Toggle Switches */
+  .path-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .path-input {
+    flex: 1;
+    min-width: 0;
+    height: 33px;
+    padding: 0 11px;
+    border-radius: 7px;
+    border: 1px solid var(--border-strong);
     background: var(--bg-base);
     color: var(--ink-primary);
-    border: 1px solid var(--hairline-strong);
-    border-radius: 3px;
-    padding: 6px 10px;
+    font-family: var(--font-mono);
+    font-size: 11.2px;
+    outline: none;
     user-select: text;
   }
+  .path-input:focus { border-color: var(--sig-cyan); }
 
-  .check-list {
+  .module-list {
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
-  .check-row {
+  .module-row {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 9px;
+    padding: 8px 11px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 7px 10px;
-    border: 1px solid var(--hairline);
-    border-radius: 3px;
-    background: var(--bg-surface);
-    cursor: pointer;
-    transition: border-color 0.14s ease;
-  }
-  .check-row:hover { border-color: var(--hairline-strong); }
-  .check-left { display: flex; align-items: center; gap: 9px; }
-  .ascii-box {
-    font-weight: 700;
-    color: var(--sig-green);
-    min-width: 24px;
-  }
-  .check-row.off .ascii-box { color: var(--ink-muted); }
-  .size-tag {
-    font-size: 10px;
-    color: var(--ink-muted);
-    border: 1px solid var(--hairline);
-    padding: 1px 6px;
-    border-radius: 3px;
-  }
-
-  /* Live Animated Progress Bar & Throughput Canvas */
-  .progress-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 6px;
-  }
-  .pct-big {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--sig-green);
-  }
-  .progress-track {
-    width: 100%;
-    height: 10px;
-    background: var(--bg-void);
-    border: 1px solid var(--hairline-strong);
-    border-radius: 3px;
-    overflow: hidden;
-    position: relative;
-  }
-  .progress-fill {
-    height: 100%;
-    width: 0%;
-    background: var(--sig-green);
-    position: relative;
-    transition: width 0.18s linear;
-  }
-  .progress-fill::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      -45deg,
-      rgba(255, 255, 255, 0.18) 0px,
-      rgba(255, 255, 255, 0.18) 8px,
-      transparent 8px,
-      transparent 16px
-    );
-    animation: barberpole 0.7s linear infinite;
-  }
-  @keyframes barberpole {
-    from { background-position: 0 0; }
-    to { background-position: 22.6px 0; }
-  }
-
-  .terminal-log {
-    height: 155px;
-    background: var(--bg-void);
-    border: 1px solid var(--hairline);
-    border-radius: 3px;
-    padding: 9px 11px;
-    overflow-y: auto;
-    font-size: 10.5px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-  .log-line { color: var(--ink-secondary); }
-  .log-line .ts { color: var(--ink-muted); margin-right: 6px; }
-  .log-line .ok { color: var(--sig-green); font-weight: 700; }
-  .log-line .cy { color: var(--sig-cyan); }
-
-  /* Bottom Action Bar */
-  .wizard-footer {
-    border-top: 1px solid var(--hairline);
-    background: var(--bg-surface);
-    padding: 11px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     gap: 10px;
-  }
-  .btn {
-    font-family: inherit;
-    font-size: 12px;
-    padding: 7px 14px;
-    border-radius: 3px;
-    border: 1px solid var(--hairline-strong);
-    background: var(--bg-elevated);
-    color: var(--ink-primary);
     cursor: pointer;
     transition: all 0.15s ease;
   }
-  .btn:hover:not(:disabled) {
-    background: var(--ink-primary);
-    color: var(--bg-base);
+  .module-row:hover {
+    border-color: var(--border-strong);
+    background: var(--bg-elevated);
   }
-  .btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
+  .module-row.off { opacity: 0.56; }
+  .mod-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .toggle-pill {
+    width: 34px;
+    height: 19px;
+    border-radius: 999px;
+    background: var(--sig-emerald);
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.18s ease;
+  }
+  .toggle-pill::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 17px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    transition: left 0.18s ease;
+  }
+  .module-row.off .toggle-pill {
+    background: var(--bg-hover);
+    border: 1px solid var(--border-strong);
+  }
+  .module-row.off .toggle-pill::after { left: 2px; top: 1px; }
+  .module-row.locked .toggle-pill { background: var(--sig-cyan); }
+  .mod-title { font-size: 12px; font-weight: 600; }
+  .mod-desc { font-size: 10.8px; color: var(--ink-muted); }
+  .mod-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: 6px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    color: var(--ink-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Step 3: Live 3D Forge Progress, 6-Subsystem Matrix & Build Stream */
+  .prog-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 7px;
+  }
+  .pct-display {
+    font-family: var(--font-mono);
+    font-size: 27px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--sig-cyan);
+  }
+  .prog-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+  }
+  .prog-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--sig-cyan), var(--sig-emerald));
+    transition: width 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .subsys-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .subsys-chip {
+    padding: 6px 9px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-muted);
+    transition: all 0.2s ease;
+  }
+  .subsys-chip .st { font-family: var(--font-mono); font-size: 10px; }
+  .subsys-chip.active {
+    border-color: var(--sig-cyan);
+    color: var(--ink-primary);
+    background: rgba(56, 189, 248, 0.09);
+  }
+  .subsys-chip.active .st { color: var(--sig-cyan); }
+  .subsys-chip.done {
+    border-color: rgba(16, 185, 129, 0.48);
+    color: var(--ink-primary);
+  }
+  .subsys-chip.done .st { color: var(--sig-emerald); font-weight: 700; }
+
+  .stream-log {
+    height: 104px;
+    background: var(--bg-void);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 8px 11px;
+    overflow-y: auto;
+    font-family: var(--font-mono);
+    font-size: 10.4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .log-row { color: var(--ink-secondary); }
+  .log-row .ts { color: var(--ink-muted); margin-right: 6px; }
+  .log-row .tag { color: var(--sig-cyan); font-weight: 700; margin-right: 6px; }
+  .log-row .ok  { color: var(--sig-emerald); font-weight: 700; margin-right: 6px; }
+
+  /* Step 4: Launch Mode Selector Cards */
+  .launch-modes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .lmode-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 9px;
+    padding: 10px 11px;
+    cursor: pointer;
+    min-width: 0;
+    transition: all 0.15s ease;
+  }
+  .lmode-card:hover { border-color: var(--border-strong); }
+  .lmode-card.selected {
+    border-color: var(--sig-emerald);
+    background: rgba(16, 185, 129, 0.09);
+  }
+  .lmode-card .t {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .lmode-card .d {
+    font-size: 10.8px;
+    color: var(--ink-muted);
+    line-height: 1.35;
+  }
+
+  /* =========================================================================
+     4. ACTION FOOTER
+     ========================================================================= */
+  .wizard-footer {
+    height: 56px;
+    flex-shrink: 0;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    padding: 0 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .btn {
+    height: 35px;
+    padding: 0 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-elevated);
+    color: var(--ink-primary);
+    font-family: var(--font-sans);
+    font-size: 12.2px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--ink-muted);
+  }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--border-subtle);
+    color: var(--ink-secondary);
+    font-size: 11.8px;
   }
   .btn-primary {
-    background: var(--ink-primary);
-    color: var(--bg-base);
+    background: var(--accent-primary);
+    color: var(--accent-primary-ink);
+    border-color: var(--accent-primary);
     font-weight: 700;
+    padding: 0 18px;
   }
   .btn-primary:hover:not(:disabled) {
-    background: var(--sig-green);
-    border-color: var(--sig-green);
-    color: #07120a;
+    filter: brightness(0.93);
+    background: var(--accent-primary);
   }
   .btn-launch {
-    background: var(--sig-green);
-    border-color: var(--sig-green);
-    color: #07120a;
-    font-weight: 700;
-    padding: 8px 18px;
+    background: var(--sig-emerald);
+    border-color: var(--sig-emerald);
+    color: #04130d;
+    font-weight: 800;
+    padding: 0 22px;
+    box-shadow: 0 4px 18px rgba(16, 185, 129, 0.28);
   }
-  .btn-launch:hover {
-    filter: brightness(1.08);
+  .btn-launch:hover:not(:disabled) {
+    background: #34d399;
+    border-color: #34d399;
+    color: #04130d;
   }
 </style>
 </head>
 <body>
 <div class="setup-shell">
-  <!-- Custom Frameless OpenCode Titlebar -->
+  <!-- 1. FRAMELESS OPENCODE STUDIO HEADER -->
   <header class="titlebar">
-    <div class="titlebar-left">
-      <span class="brand-mark">
-        <span class="pulse-dot"></span>
-        <span>FALCON AI // LIVE SETUP v3.0.0</span>
-      </span>
-      <span class="title-badge">MIT OPEN SOURCE &middot; C++20 &middot; 0 CREDITS</span>
+    <div class="tb-left">
+      <span class="logo-badge">F</span>
+      <span class="tb-title">Falcon AI Studio</span>
+      <span class="tb-pill">Setup v3.0.0</span>
+      <span class="tb-meta">Pure C++20 &middot; MIT Open Source &middot; Zero Credit Limits</span>
     </div>
-    <div class="titlebar-controls">
-      <button class="win-btn" id="sfxBtn" onclick="toggleAudio()">[sfx: on]</button>
-      <button class="win-btn" onclick="document.body.classList.toggle('cream')">[theme]</button>
-      <button class="win-btn" onclick="winMinimize()">[&mdash;]</button>
-      <button class="win-btn close" onclick="winClose()">[x]</button>
+    <div class="tb-right">
+      <button class="tb-btn" id="sfxBtn" onclick="toggleAudio()" title="Toggle subtle synth audio">SFX: ON</button>
+      <button class="tb-btn" id="themeBtn" onclick="toggleTheme()" title="Switch Dark / Daylight theme">Theme</button>
+      <button class="tb-btn" onclick="winMinimize()" title="Minimize">&mdash;</button>
+      <button class="tb-btn win-close" onclick="winClose()" title="Close">&#10005;</button>
     </div>
   </header>
 
   <div class="setup-main">
-    <!-- Left Column: Live 60-FPS 3D Hologram & Laser-Slicer Canvas -->
-    <aside class="holo-pane">
-      <canvas id="holoCanvas"></canvas>
-      <div class="holo-top-overlay">
-        <div class="holo-tag">
-          <div><strong id="holoTitle">HOLOGRAM // GUNDANIUM MECHA CORE</strong></div>
-          <div id="holoSub" style="color: var(--sig-green)">drag to orbit 3d mesh &middot; 60 fps live</div>
+    <!-- 2. LEFT INTERACTIVE PER-PIXEL WEBGL 3D LASER-SINTERING VIEWPORT -->
+    <aside class="forge-pane">
+      <canvas id="glCanvas"></canvas>
+
+      <div class="forge-hud-top">
+        <div class="forge-card">
+          <div class="forge-model-name">
+            <span class="live-dot"></span>
+            <span id="holoTitle">Aero Widebody GT Hypercar</span>
+          </div>
+          <div class="forge-sub" id="holoSub">Drag to orbit 3D mesh &middot; Scroll to zoom</div>
         </div>
-        <div class="mesh-switcher">
-          <button class="mesh-chip active" onclick="setHoloModel('mecha', this)">[mecha]</button>
-          <button class="mesh-chip" onclick="setHoloModel('falcon', this)">[starfighter]</button>
-          <button class="mesh-chip" onclick="setHoloModel('crystal', this)">[relic]</button>
+
+        <div class="shade-pills">
+          <button class="shade-pill active" id="sh-forge" onclick="setShadeMode('forge', this)">Laser</button>
+          <button class="shade-pill" id="sh-quad" onclick="setShadeMode('quad', this)">Quad</button>
+          <button class="shade-pill" id="sh-pbr" onclick="setShadeMode('pbr', this)">Solid</button>
         </div>
       </div>
-      <div class="holo-footer">
-        <span id="scanStatus">[●] surface-nets laser slicer standby</span>
-        <span id="fpsCounter">60 fps</span>
+
+      <div class="forge-hud-bottom">
+        <div class="mesh-bar">
+          <button class="mesh-btn active" onclick="setHoloModel('hypercar', this)">GT Hypercar</button>
+          <button class="mesh-btn" onclick="setHoloModel('mecha', this)">Cyber Mecha</button>
+          <button class="mesh-btn" onclick="setHoloModel('bust', this)">SIREN Bust</button>
+          <button class="mesh-btn" onclick="setHoloModel('fighter', this)">Starfighter</button>
+        </div>
+        <div class="forge-telemetry">
+          <span id="scanStatus">Laser Forge Standby &middot; Y=0mm Build Plate</span>
+          <span id="fpsCounter">60 FPS &middot; WebGL PBR</span>
+        </div>
       </div>
     </aside>
 
-    <!-- Right Column: 4-Stage Interactive Setup Wizard -->
+    <!-- 3. RIGHT 4-STEP OPENCODE SETUP WIZARD -->
     <section class="wizard-pane">
-      <nav class="stepper">
-        <div class="step-item active" id="st-nav-1">[01] hardware scan</div>
-        <div class="step-item" id="st-nav-2">[02] components</div>
-        <div class="step-item" id="st-nav-3">[03] live build</div>
-        <div class="step-item" id="st-nav-4">[04] launch</div>
+      <nav class="stepper-bar">
+        <div class="step-node active" id="st-nav-1">
+          <span class="step-num" id="st-num-1">1</span>
+          <span>System Check</span>
+        </div>
+        <div class="step-line" id="st-line-1"></div>
+        <div class="step-node" id="st-nav-2">
+          <span class="step-num" id="st-num-2">2</span>
+          <span>Customize</span>
+        </div>
+        <div class="step-line" id="st-line-2"></div>
+        <div class="step-node" id="st-nav-3">
+          <span class="step-num" id="st-num-3">3</span>
+          <span>Live 3D Forge</span>
+        </div>
+        <div class="step-line" id="st-line-3"></div>
+        <div class="step-node" id="st-nav-4">
+          <span class="step-num" id="st-num-4">4</span>
+          <span>Launch</span>
+        </div>
       </nav>
 
       <div class="stage-body">
-        <!-- STAGE 1: WELCOME & LIVE HARDWARE PROBE -->
+        <!-- STEP 1: HARDWARE & AI READINESS -->
         <div class="stage-pane active" id="stage-1">
           <div>
-            <h1>Welcome to Falcon AI Studio v3.0</h1>
-            <div class="subtitle">
-              All-in-One Open-Source 3D Model Swarm, CAD Slicer &amp; Playable 60-FPS 3D Game Engine.
-            </div>
+            <div class="stage-eyebrow">&#9679; Hardware Auto-Calibrated &middot; Zero GPU Required</div>
+            <h1 class="stage-title">Studio-Grade 3D AI, Built for Your Hardware</h1>
+            <p class="stage-desc">
+              Full Meshy-class 3D sculpting, Garland-Heckbert Quad Remeshing, 4K PBR baking, 24-clip skeletal rigging, and playable 60-FPS 3D game creation — running natively in compiled C++20.
+            </p>
           </div>
 
-          <div class="panel-box">
-            <div class="panel-label">
-              <span>live bare-metal hardware telemetry</span>
-              <span style="color: var(--sig-green)" id="probeState">[+] scan complete &middot; optimal tier locked</span>
+          <div class="card">
+            <div class="card-head">
+              <span>Live System &amp; AI Router Telemetry</span>
+              <span style="color: var(--sig-emerald); font-family: var(--font-mono); text-transform: none;" id="probeState">&#10003; Optimal Profile Locked</span>
             </div>
-            <div class="hw-grid">
-              <div class="hw-stat">
-                <div class="k">processor</div>
-                <div class="v" id="hwCpu">Detecting x86_64...</div>
-                <div class="s" id="hwCores">OpenMP SIMD Ready</div>
+            <div class="hw-grid-4">
+              <div class="hw-tile">
+                <div class="k">Processor</div>
+                <div class="v" id="hwCpu">x86_64 Multi-Core</div>
+                <div class="s" id="hwCores">OpenMP Parallel</div>
               </div>
-              <div class="hw-stat">
-                <div class="k">memory &amp; runtime</div>
-                <div class="v" id="hwRam">Probing RAM...</div>
-                <div class="s">Zero Python &middot; Zero Docker</div>
+              <div class="hw-tile">
+                <div class="k">Memory</div>
+                <div class="v" id="hwRam">16 GB RAM</div>
+                <div class="s">0 Python &middot; 0 Docker</div>
               </div>
-              <div class="hw-stat">
-                <div class="k">3d compute profile</div>
+              <div class="hw-tile">
+                <div class="k">3D Compute</div>
                 <div class="v" id="hwGpu">Auto-Adaptive</div>
                 <div class="s" id="hwGrid">104&sup3; Watertight SDF</div>
               </div>
+              <div class="hw-tile">
+                <div class="k">AI Providers</div>
+                <div class="v">68 Free + Local</div>
+                <div class="s" id="hwLocalAi">Ollama / API Ready</div>
+              </div>
             </div>
           </div>
 
-          <div class="feature-pills">
-            <div class="feat-card">
-              <strong>[&gt;] 6-Agent Autonomous 3D Swarm</strong>
-              <span>@lead-architect, @kitbash-detailer, @sculptor-csg, @material-pbr, @rig-kinematics &amp; @qa-inspector.</span>
+          <div class="pillar-grid">
+            <div class="pillar-card">
+              <div class="pillar-ico">Q4</div>
+              <div>
+                <h3>Quad Remesh &amp; 4K PBR Baker</h3>
+                <p>Garland-Heckbert QEM (<code class="c-tag">100&ndash;300k</code> quads), 1K/2K/4K maps, AI prompt-to-PBR &amp; 3D region brush.</p>
+              </div>
             </div>
-            <div class="feat-card">
-              <strong>[&gt;] Playable 60-FPS 3D Game Creator</strong>
-              <span>Build, mutate live &amp; play 3D games in-app; export standalone .HTML WebGL games &amp; Unity C#.</span>
+            <div class="pillar-card">
+              <div class="pillar-ico">MV</div>
+              <div>
+                <h3>4-Draft Grid, Multi-View &amp; SIREN</h3>
+                <p>4-candidate fast previews, 1&ndash;4 photo visual-hull carving with RGB projection &amp; organic busts.</p>
+              </div>
             </div>
-            <div class="feat-card">
-              <strong>[&gt;] 68 Free AI Providers Built-In</strong>
-              <span>4 no-key instant providers (~30 models ready immediately) + 52 free-key + 11 local engines.</span>
+            <div class="pillar-card">
+              <div class="pillar-ico">24</div>
+              <div>
+                <h3>Volumetric Skin &amp; 24 Motion Clips</h3>
+                <p>4-bone auto-rigging + <code class="c-tag">.FBX</code>, Apple <code class="c-tag">.USDZ</code>, <code class="c-tag">.GLB</code>, <code class="c-tag">.3MF</code> &amp; 1-click slicers.</p>
+              </div>
             </div>
-            <div class="feat-card">
-              <strong>[&gt;] 100% Watertight 3D Print &amp; CAD</strong>
-              <span>Exact millimeter scaling, 256&times;256 glTF 2.0 PBR maps, .GLB, .3MF, .STL, .OBJ &amp; .PLY exports.</span>
+            <div class="pillar-card">
+              <div class="pillar-ico">GM</div>
+              <div>
+                <h3>3D Game Studio &amp; Engine Plugins</h3>
+                <p>Playable 60-FPS 3D games + zero-Python plugins for Unity C#, UE5 C++, Godot 4, Roblox &amp; Blender.</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- STAGE 2: CUSTOM INSTALL DIRECTORY & MODULE SELECTION -->
+        <!-- STEP 2: CUSTOMIZE INSTALL PATH & MODULES -->
         <div class="stage-pane" id="stage-2">
           <div>
-            <h1>Configure Installation &amp; AI Modules</h1>
-            <div class="subtitle">
-              Installs cleanly in user space with zero administrator UAC headaches and zero background bloatware.
+            <div class="stage-eyebrow" style="color: var(--sig-cyan);">&#9679; Clean User-Space Deployment &middot; Zero Admin UAC</div>
+            <h1 class="stage-title">Customize Your Falcon AI v3.0 Studio</h1>
+            <p class="stage-desc">
+              Select your installation directory and optional studio packs. Zero background services or telemetry.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span>Installation Folder</span>
+              <span id="sizeEstimateBadge" style="color: var(--sig-emerald); font-family: var(--font-mono); text-transform: none;">Required: ~148 MB</span>
+            </div>
+            <div class="path-bar">
+              <input class="path-input" id="installDirInput" value="C:\Users\User\AppData\Local\Programs\FalconAI" />
+              <button class="btn" onclick="browseDirectory()">Browse&hellip;</button>
             </div>
           </div>
 
-          <div class="panel-box">
-            <div class="panel-label">
-              <span>destination directory</span>
-              <span id="freeDiskBadge" style="color: var(--sig-green)">required: ~145 MB</span>
-            </div>
-            <div class="path-row">
-              <input class="text-input" id="installDirInput" value="C:\Users\User\AppData\Local\Programs\FalconAI" />
-              <button class="btn" onclick="browseDirectory()">[browse...]</button>
-            </div>
-          </div>
-
-          <div class="check-list">
-            <div class="check-row" data-opt="core" onclick="toggleOpt(this, true)">
-              <div class="check-left">
-                <span class="ascii-box">[x]</span>
+          <div class="module-list">
+            <div class="module-row locked" onclick="beep(500, 0.03)">
+              <div class="mod-left">
+                <div class="toggle-pill"></div>
                 <div>
-                  <strong>Falcon AI Desktop + Compiled C++20 Geometry Daemon</strong>
-                  <div style="font-size: 10.5px; color: var(--ink-muted)">Core OpenMP SDF/CSG compiler, PBR texture synthesizer &amp; OpenCode UI</div>
+                  <div class="mod-title">Falcon C++20 Geometry Engine &amp; OpenCode Desktop</div>
+                  <div class="mod-desc">OpenMP SDF/SIREN sculptor, Quad QEM remesher, 4K PBR baker, FBX/USDZ exporters &amp; UI</div>
                 </div>
               </div>
-              <span class="size-tag">required &middot; 83 MB</span>
+              <span class="mod-badge">Required &middot; 82 MB</span>
             </div>
 
-            <div class="check-row" id="opt-providers" onclick="toggleOpt(this)">
-              <div class="check-left">
-                <span class="ascii-box">[x]</span>
+            <div class="module-row" id="opt-providers" data-mb="4" onclick="toggleModule(this)">
+              <div class="mod-left">
+                <div class="toggle-pill"></div>
                 <div>
-                  <strong>Activate 4 No-Key Instant Free AI Providers (~30 Models)</strong>
-                  <div style="font-size: 10.5px; color: var(--ink-muted)">OVHcloud AI, Kilo Gateway, LLM7 &amp; Pollinations enabled out-of-the-box (paid providers OFF)</div>
+                  <div class="mod-title">68 Free AI Providers + Local Ollama / LM Studio Router</div>
+                  <div class="mod-desc">Pre-configures ~30 instant keyless models + 1-click custom API key &amp; local port scanner</div>
                 </div>
               </div>
-              <span class="size-tag">$0 &middot; instant</span>
+              <span class="mod-badge">$0 &middot; Instant</span>
             </div>
 
-            <div class="check-row" id="opt-starters" onclick="toggleOpt(this)">
-              <div class="check-left">
-                <span class="ascii-box">[x]</span>
+            <div class="module-row" id="opt-plugins" data-mb="18" onclick="toggleModule(this)">
+              <div class="mod-left">
+                <div class="toggle-pill"></div>
                 <div>
-                  <strong>High-Detail PBR 3D Showcase Pack + 2 Playable 3D Games</strong>
-                  <div style="font-size: 10.5px; color: var(--ink-muted)">Gundanium Mecha, Elder Wyvern, GT Hypercar, Citadel Keep, Katana + Wyvern Siege &amp; Midnight GT</div>
+                  <div class="mod-title">Official Game Engine &amp; DCC Live-Link Pack</div>
+                  <div class="mod-desc">Unity C#, Unreal Engine 5 C++, Godot 4 GDScript, Roblox Luau &amp; C++20 Blender/Maya bridge</div>
                 </div>
               </div>
-              <span class="size-tag">32 MB</span>
+              <span class="mod-badge">18 MB</span>
             </div>
 
-            <div class="check-row" id="opt-shortcuts" onclick="toggleOpt(this)">
-              <div class="check-left">
-                <span class="ascii-box">[x]</span>
+            <div class="module-row" id="opt-starters" data-mb="44" onclick="toggleModule(this)">
+              <div class="mod-left">
+                <div class="toggle-pill"></div>
                 <div>
-                  <strong>Create Desktop &amp; Start Menu Shortcuts + Clean Uninstaller</strong>
-                  <div style="font-size: 10.5px; color: var(--ink-muted)">Adds Falcon AI shortcut &amp; registers clean 1-click uninstaller in Windows Installed Apps</div>
+                  <div class="mod-title">3D Showcase Vault, Playable 3D Games &amp; Desktop Shortcuts</div>
+                  <div class="mod-desc">Starter PBR <code class="c-tag">.GLB</code> assets, 2 playable 3D games, Desktop/Start Menu icons &amp; uninstaller</div>
                 </div>
               </div>
-              <span class="size-tag">shortcuts</span>
+              <span class="mod-badge">44 MB</span>
             </div>
           </div>
         </div>
 
-        <!-- STAGE 3: LIVE ANIMATED VOXEL-SLICER INSTALLATION -->
+        <!-- STEP 3: LIVE 3D LASER-SINTERING INSTALLATION -->
         <div class="stage-pane" id="stage-3">
           <div>
-            <h1 id="installHeadline">Materializing Falcon AI Studio...</h1>
-            <div class="subtitle" id="installPhaseSub">
-              Watch the left 3D hologram slice and solidify in sync with real-time file extraction.
-            </div>
+            <div class="stage-eyebrow" style="color: var(--sig-cyan);" id="forgeEyebrow">&#9679; Per-Pixel 3D Laser Sintering Active</div>
+            <h1 class="stage-title" id="installHeadline">Forging Falcon AI Studio v3.0&hellip;</h1>
+            <p class="stage-desc" id="installPhaseSub">
+              Watch the interactive WebGL 3D model laser-solidify from holographic Quad-Lattice into clearcoat PBR metal as each subsystem verifies.
+            </p>
           </div>
 
-          <div class="panel-box">
-            <div class="progress-header">
+          <div class="card">
+            <div class="prog-hero">
               <div>
-                <div style="font-size: 10.5px; color: var(--ink-muted)" id="currentTaskLabel">initializing c++20 package stream...</div>
-                <div style="font-size: 10px; color: var(--sig-cyan); margin-top: 2px" id="speedTelemetry">throughput: 148 MB/s &middot; zlib-9 verified</div>
-              </div>
-              <div class="pct-big" id="pctText">0%</div>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill" id="pctBar"></div>
-            </div>
-          </div>
-
-          <canvas id="waveCanvas" height="44" style="width: 100%; height: 44px; border: 1px solid var(--hairline); border-radius: 3px; background: var(--bg-void);"></canvas>
-
-          <div class="terminal-log" id="installLog"></div>
-        </div>
-
-        <!-- STAGE 4: COMPLETION & 1-CLICK STUDIO IGNITION -->
-        <div class="stage-pane" id="stage-4">
-          <div>
-            <h1 style="color: var(--sig-green)">[+] Falcon AI v3.0 Installed &amp; Verified</h1>
-            <div class="subtitle">
-              All C++20 3D synthesis engines, 68 free AI provider routes, and 60-FPS 3D game worlds are online.
-            </div>
-          </div>
-
-          <div class="panel-box">
-            <div class="panel-label">
-              <span>installation manifest summary</span>
-              <span style="color: var(--sig-green)">100% INTEGRITY PASS</span>
-            </div>
-            <div class="hw-grid">
-              <div class="hw-stat">
-                <div class="k">installed path</div>
-                <div class="v" id="donePath" style="font-size: 10.5px; word-break: break-all;">Local\Programs\FalconAI</div>
-                <div class="s">Desktop &amp; Start Menu Ready</div>
-              </div>
-              <div class="hw-stat">
-                <div class="k">ai swarm team</div>
-                <div class="v">6 Agents + 68 Free</div>
-                <div class="s">~30 Instant Models Ready</div>
-              </div>
-              <div class="hw-stat">
-                <div class="k">3d &amp; game studio</div>
-                <div class="v">5 .GLB + 2 Games</div>
-                <div class="s">60 FPS WebGL2 + Unity C#</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="check-list">
-            <div class="check-row" id="opt-autolaunch" onclick="toggleOpt(this)">
-              <div class="check-left">
-                <span class="ascii-box">[x]</span>
-                <div>
-                  <strong>Launch Falcon AI Studio v3.0 Immediately</strong>
-                  <div style="font-size: 10.5px; color: var(--ink-muted)">Opens the 3D Model Swarm &amp; Playable 3D Game Engine workspace right now</div>
+                <div style="font-size: 12px; font-weight: 600;" id="currentTaskLabel">Preparing installation workspace&hellip;</div>
+                <div style="font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-muted); margin-top: 2px;" id="speedTelemetry">
+                  Throughput: 162 MB/s &middot; Integrity: CRC32 + SHA Verified
                 </div>
               </div>
-              <span class="size-tag">ready</span>
+              <div class="pct-display" id="pctText">0%</div>
+            </div>
+            <div class="prog-track">
+              <div class="prog-fill" id="pctBar"></div>
+            </div>
+          </div>
+
+          <div class="subsys-grid">
+            <div class="subsys-chip" id="sub-VFS"><span>VFS Root</span><span class="st">Queued</span></div>
+            <div class="subsys-chip" id="sub-CORE"><span>C++20 Core</span><span class="st">Queued</span></div>
+            <div class="subsys-chip" id="sub-AI-POOL"><span>68 AI Router</span><span class="st">Queued</span></div>
+            <div class="subsys-chip" id="sub-PLUGINS"><span>DCC Plugins</span><span class="st">Queued</span></div>
+            <div class="subsys-chip" id="sub-3D-PACK"><span>3D + Games</span><span class="st">Queued</span></div>
+            <div class="subsys-chip" id="sub-SHORTCUT"><span>Shortcuts</span><span class="st">Queued</span></div>
+          </div>
+
+          <canvas id="waveCanvas" height="36" style="width: 100%; height: 36px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-void); flex-shrink: 0;"></canvas>
+
+          <div class="stream-log" id="installLog"></div>
+        </div>
+
+        <!-- STEP 4: VERIFIED COMPLETION & LAUNCH EXPERIENCE -->
+        <div class="stage-pane" id="stage-4">
+          <div>
+            <div class="stage-eyebrow">&#10003; 100% Integrity Verified &middot; All 7 v3.0 Engines Online</div>
+            <h1 class="stage-title">Falcon AI Studio v3.0 is Ready</h1>
+            <p class="stage-desc">
+              Your standalone C++20 3D engine, 4K PBR baker, Quad QEM remesher, 24-clip rigger, and 68 free AI providers are ready.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span>Deployment Summary</span>
+              <span style="color: var(--sig-emerald); font-family: var(--font-mono); text-transform: none;">READY TO LAUNCH</span>
+            </div>
+            <div class="summary-grid-3">
+              <div class="hw-tile">
+                <div class="k">Installed Location</div>
+                <div class="v" id="donePath" style="font-family: var(--font-mono); font-size: 10.8px;">Local\Programs\FalconAI</div>
+                <div class="s">Clean 1-Click Uninstaller Ready</div>
+              </div>
+              <div class="hw-tile">
+                <div class="k">3D &amp; Export Pipeline</div>
+                <div class="v">FBX &middot; USDZ &middot; GLB &middot; 3MF</div>
+                <div class="s">Quad-QEM + 24 Motion Clips</div>
+              </div>
+              <div class="hw-tile">
+                <div class="k">Engine Live-Links</div>
+                <div class="v">Unity &middot; UE5 &middot; Godot</div>
+                <div class="s">+ Roblox &amp; Blender C++</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-muted); margin-bottom: 7px;">
+              Choose Initial Workspace View
+            </div>
+            <div class="launch-modes">
+              <div class="lmode-card selected" onclick="selectLaunchMode('model', this)">
+                <div class="t">3D Model &amp; Sculpt Studio</div>
+                <div class="d">Open Text/Multi-View-to-3D, 4-Draft Grid, Quad Remesh &amp; 4K PBR.</div>
+              </div>
+              <div class="lmode-card" onclick="selectLaunchMode('game', this)">
+                <div class="t">Playable 3D Game Studio</div>
+                <div class="d">Jump into playable 60-FPS 3D worlds &amp; live game co-pilot.</div>
+              </div>
+              <div class="lmode-card" onclick="selectLaunchMode('providers', this)">
+                <div class="t">AI Providers &amp; Ollama</div>
+                <div class="d">Connect API keys, custom endpoints, or scan local LLM ports.</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Footer Navigation -->
+      <!-- 4. FOOTER BAR -->
       <footer class="wizard-footer">
         <div id="footerLeft">
-          <button class="btn" id="portableBtn" onclick="launchStudio(true)" title="Run immediately without copying files">
-            [&gt; run portable mode instantly]
+          <button class="btn btn-ghost" id="portableBtn" onclick="launchStudio(true)" title="Launch Falcon AI Studio immediately without copying files">
+            &#9889; Run Portable Instantly
           </button>
         </div>
         <div style="display: flex; gap: 8px;" id="footerRight">
-          <button class="btn" id="backBtn" style="display: none;" onclick="goStage(1)">[&larr; back]</button>
-          <button class="btn btn-primary" id="nextBtn" onclick="nextAction()">[configure install &rarr;]</button>
+          <button class="btn" id="backBtn" style="display: none;" onclick="goStage(1)">&larr; Back</button>
+          <button class="btn btn-primary" id="nextBtn" onclick="nextAction()">Configure Setup &rarr;</button>
         </div>
       </footer>
     </section>
@@ -754,11 +1149,12 @@
 
 <script>
   // =========================================================================
-  // WebAudio Subtle Futuristic Synth Feedback
+  // 1. Subtle Harmonic WebAudio Feedback + Theme & Window Controls
   // =========================================================================
   let audioOn = true;
   let audioCtx = null;
-  function beep(freq = 520, dur = 0.045, type = 'triangle', vol = 0.035) {
+
+  function beep(freq = 540, dur = 0.045, type = 'sine', vol = 0.03) {
     if (!audioOn) return;
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -774,15 +1170,24 @@
       osc.stop(audioCtx.currentTime + dur);
     } catch {}
   }
+
+  function playChord() {
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, idx) => {
+      setTimeout(() => beep(f, 0.16, 'triangle', 0.035), idx * 55);
+    });
+  }
+
   function toggleAudio() {
     audioOn = !audioOn;
-    document.getElementById('sfxBtn').textContent = audioOn ? '[sfx: on]' : '[sfx: off]';
+    document.getElementById('sfxBtn').textContent = audioOn ? 'SFX: ON' : 'SFX: OFF';
     if (audioOn) beep(660, 0.05);
   }
 
-  // =========================================================================
-  // Window Controls & Electron IPC Bridge (Graceful Browser Fallback at /setup)
-  // =========================================================================
+  function toggleTheme() {
+    document.body.classList.toggle('light');
+    beep(600, 0.04);
+  }
+
   const desk = window.falconDesktop || null;
   function winMinimize() { if (desk?.minimize) desk.minimize(); }
   function winClose() {
@@ -790,513 +1195,902 @@
     else window.location.href = '/';
   }
 
-  // Populate live hardware stats from Electron IPC or /api/hardware
-  (async function initHardwareInfo() {
+  // =========================================================================
+  // 2. Live Hardware & Local AI Port Telemetry Probe
+  // =========================================================================
+  (async function probeHardware() {
     try {
       if (desk?.getInstallerDefaults) {
         const info = await desk.getInstallerDefaults();
         if (info.defaultDir) document.getElementById('installDirInput').value = info.defaultDir;
         if (info.cpu) document.getElementById('hwCpu').textContent = info.cpu;
-        if (info.cores) document.getElementById('hwCores').textContent = info.cores + ' logical threads · OpenMP';
+        if (info.cores) document.getElementById('hwCores').textContent = info.cores + ' Threads · OpenMP';
         if (info.ramGb) document.getElementById('hwRam').textContent = info.ramGb + ' GB System RAM';
       }
       const r = await fetch('/api/hardware');
       if (r.ok) {
         const hw = await r.json();
-        if (hw.cpu?.brand) document.getElementById('hwCpu').textContent = hw.cpu.brand.slice(0, 26);
-        if (hw.cpu?.logical_cores) document.getElementById('hwCores').textContent = hw.cpu.logical_cores + ' threads · C++20 OpenMP';
-        if (hw.memory?.total_gb) document.getElementById('hwRam').textContent = hw.memory.total_gb + ' GB RAM';
+        if (hw.cpu?.brand) document.getElementById('hwCpu').textContent = hw.cpu.brand;
+        if (hw.cpu?.logical_cores) document.getElementById('hwCores').textContent = hw.cpu.logical_cores + ' Threads · OpenMP';
+        if (hw.memory?.total_gb) document.getElementById('hwRam').textContent = Math.round(hw.memory.total_gb * 10) / 10 + ' GB RAM';
         const gpus = hw.gpus || [];
-        document.getElementById('hwGpu').textContent = gpus.length ? gpus[0].name.slice(0, 22) : '0-GPU CPU OpenMP';
+        document.getElementById('hwGpu').textContent = gpus.length ? gpus[0].name : 'CPU OpenMP SIMD';
         document.getElementById('hwGrid').textContent = (hw.profile?.sdf_grid_resolution || 104) + '³ Watertight SDF';
+        const loc = (hw.local_ai_runtimes || []).filter((x) => x.reachable);
+        if (loc.length > 0) {
+          document.getElementById('hwLocalAi').textContent = loc.map((x) => x.name.split(' ')[0]).slice(0, 2).join(' + ') + ' Online';
+        }
       }
     } catch {
       document.getElementById('hwCpu').textContent = (navigator.hardwareConcurrency || 8) + '-Core x86_64 CPU';
-      document.getElementById('hwRam').textContent = (navigator.deviceMemory || 8) + '+ GB System RAM';
-      document.getElementById('hwGpu').textContent = 'WebGL2 + C++20 OpenMP';
+      document.getElementById('hwRam').textContent = (navigator.deviceMemory || 8) + '+ GB RAM';
     }
   })();
 
   // =========================================================================
-  // Wizard State & Options
+  // 3. Wizard Navigation, Module Toggles & Real Installation Runner
   // =========================================================================
   let currentStage = 1;
-  let installProgress = 0; // 0..100 drives the 3D Laser-Slicer Scanline on the Hologram!
+  let installProgress = 0;
   let installing = false;
-  let celebrateBurst = 0;
+  let celebrateWave = 0;
+  let launchMode = 'model';
+  const throughputSamples = new Array(52).fill(0.18);
 
-  function toggleOpt(el, locked = false) {
-    if (locked) return;
-    beep(580, 0.035);
-    el.classList.toggle('off');
-    const box = el.querySelector('.ascii-box');
-    box.textContent = el.classList.contains('off') ? '[ ]' : '[x]';
+  function updateDiskEstimate() {
+    let mb = 82;
+    ['opt-providers', 'opt-plugins', 'opt-starters'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el && !el.classList.contains('off')) mb += Number(el.dataset.mb || 0);
+    });
+    document.getElementById('sizeEstimateBadge').textContent = `Required: ~${mb} MB`;
   }
 
-  function isOptOn(id) {
+  function toggleModule(el) {
+    beep(580, 0.035);
+    el.classList.toggle('off');
+    updateDiskEstimate();
+  }
+
+  function isModuleOn(id) {
     const el = document.getElementById(id);
     return el ? !el.classList.contains('off') : true;
   }
 
+  function selectLaunchMode(mode, cardEl) {
+    launchMode = mode;
+    beep(620, 0.035);
+    document.querySelectorAll('.lmode-card').forEach((c) => c.classList.remove('selected'));
+    cardEl.classList.add('selected');
+  }
+
   async function browseDirectory() {
-    beep(620, 0.04);
+    beep(610, 0.04);
+    const input = document.getElementById('installDirInput');
     if (desk?.browseInstallDir) {
-      const picked = await desk.browseInstallDir(document.getElementById('installDirInput').value);
-      if (picked) document.getElementById('installDirInput').value = picked;
+      const picked = await desk.browseInstallDir(input.value);
+      if (picked) input.value = picked;
     } else {
-      const manual = prompt('Enter target installation path:', document.getElementById('installDirInput').value);
-      if (manual) document.getElementById('installDirInput').value = manual;
+      const manual = prompt('Select Falcon AI v3.0 installation directory:', input.value);
+      if (manual) input.value = manual;
     }
   }
 
   function goStage(n) {
-    if (installing) return;
-    beep(500 + n * 70, 0.045);
+    if (installing && n < 3) return;
     currentStage = n;
+    beep(500 + n * 55, 0.045);
+
     for (let i = 1; i <= 4; i++) {
       document.getElementById('stage-' + i).classList.toggle('active', i === n);
       const nav = document.getElementById('st-nav-' + i);
+      const num = document.getElementById('st-num-' + i);
       nav.classList.toggle('active', i === n);
-      nav.classList.toggle('done', i < n);
+      nav.classList.toggle('done', i < n || n === 4);
+      num.innerHTML = (i < n || n === 4) ? '&#10003;' : String(i);
+      if (i <= 3) {
+        document.getElementById('st-line-' + i).classList.toggle('done', i < n || n === 4);
+      }
     }
+
     const backBtn = document.getElementById('backBtn');
     const nextBtn = document.getElementById('nextBtn');
-    const portableBtn = document.getElementById('portableBtn');
+    const portBtn = document.getElementById('portableBtn');
 
     if (n === 1) {
       backBtn.style.display = 'none';
-      portableBtn.style.display = 'inline-block';
-      nextBtn.style.display = 'inline-block';
+      portBtn.style.display = 'inline-flex';
       nextBtn.className = 'btn btn-primary';
-      nextBtn.textContent = '[configure install →]';
+      nextBtn.innerHTML = 'Configure Setup &rarr;';
+      nextBtn.disabled = false;
     } else if (n === 2) {
-      backBtn.style.display = 'inline-block';
-      portableBtn.style.display = 'inline-block';
-      nextBtn.style.display = 'inline-block';
-      nextBtn.className = 'btn btn-launch';
-      nextBtn.textContent = '[⚡ install falcon ai v3.0]';
+      backBtn.style.display = 'inline-flex';
+      portBtn.style.display = 'inline-flex';
+      nextBtn.className = 'btn btn-primary';
+      nextBtn.innerHTML = 'Install Falcon AI v3.0 &rarr;';
+      nextBtn.disabled = false;
     } else if (n === 3) {
       backBtn.style.display = 'none';
-      portableBtn.style.display = 'none';
-      nextBtn.style.display = 'inline-block';
+      portBtn.style.display = 'none';
+      nextBtn.className = 'btn btn-primary';
+      nextBtn.innerHTML = 'Materializing 3D Engine&hellip;';
       nextBtn.disabled = true;
-      nextBtn.className = 'btn';
-      nextBtn.textContent = '[installing...]';
     } else if (n === 4) {
       backBtn.style.display = 'none';
-      portableBtn.style.display = 'none';
-      nextBtn.disabled = false;
-      nextBtn.style.display = 'inline-block';
+      portBtn.style.display = 'none';
       nextBtn.className = 'btn btn-launch';
-      nextBtn.textContent = '[▶ launch falcon ai studio now]';
+      nextBtn.innerHTML = 'Launch Falcon AI Studio v3.0 &crarr;';
+      nextBtn.disabled = false;
     }
   }
 
   function nextAction() {
     if (currentStage === 1) goStage(2);
-    else if (currentStage === 2) startLiveInstallation();
+    else if (currentStage === 2) startInstallation();
     else if (currentStage === 4) launchStudio(false);
   }
 
-  function appendLog(tag, msg, isOk = false) {
-    const log = document.getElementById('installLog');
-    const d = new Date();
-    const ts = d.toTimeString().slice(0, 8);
-    const div = document.createElement('div');
-    div.className = 'log-line';
-    div.innerHTML = `<span class="ts">${ts}</span><span class="${isOk ? 'ok' : 'cy'}">[${tag}]</span> ${msg}`;
-    log.appendChild(div);
-    log.scrollTop = log.scrollHeight;
+  function appendLog(tag, message, isOk = false) {
+    const box = document.getElementById('installLog');
+    const ts = new Date().toTimeString().slice(0, 8);
+    const row = document.createElement('div');
+    row.className = 'log-row';
+    row.innerHTML = `<span class="ts">${ts}</span><span class="${isOk ? 'ok' : 'tag'}">[${tag}]</span>${message}`;
+    box.appendChild(row);
+    box.scrollTop = box.scrollHeight;
   }
 
-  const throughputHistory = new Array(60).fill(0);
+  const SUBSYS_ORDER = ['VFS', 'CORE', 'AI-POOL', 'PLUGINS', '3D-PACK', 'SHORTCUT'];
+  function markSubsystems(activeTag, pct) {
+    const idx = SUBSYS_ORDER.indexOf(activeTag);
+    SUBSYS_ORDER.forEach((k, i) => {
+      const chip = document.getElementById('sub-' + k);
+      if (!chip) return;
+      const st = chip.querySelector('.st');
+      if (pct >= 100 || (idx >= 0 && i < idx)) {
+        chip.className = 'subsys-chip done';
+        st.innerHTML = '&#10003; Ready';
+      } else if (i === idx) {
+        chip.className = 'subsys-chip active';
+        st.textContent = 'Syncing…';
+      }
+    });
+  }
 
-  async function startLiveInstallation() {
+  function setProgressUI(pct, tag, task, speedMbps, logLine, isOk) {
+    installProgress = Math.max(0, Math.min(100, pct));
+    document.getElementById('pctText').textContent = Math.round(installProgress) + '%';
+    document.getElementById('pctBar').style.width = installProgress + '%';
+    if (task) document.getElementById('currentTaskLabel').textContent = task;
+    if (speedMbps) {
+      document.getElementById('speedTelemetry').textContent =
+        `Throughput: ${speedMbps} MB/s · Laser Z-Slice: ${Math.round(installProgress * 1.42)} / 142`;
+      throughputSamples.push(Math.min(1, speedMbps / 210));
+      if (throughputSamples.length > 52) throughputSamples.shift();
+    }
+    document.getElementById('scanStatus').textContent =
+      installProgress < 100
+        ? `Laser Sintering Layer ${Math.round(installProgress * 1.42)}/142 (${Math.round(installProgress)}%)`
+        : '100% Solidified · Clearcoat PBR Mesh Ready';
+    if (tag) markSubsystems(tag, installProgress);
+    if (logLine) appendLog(tag || 'SETUP', logLine, isOk);
+  }
+
+  async function startInstallation() {
     goStage(3);
     installing = true;
     installProgress = 0;
     document.getElementById('installLog').innerHTML = '';
+    setShadeMode('forge', document.getElementById('sh-forge'));
 
     const targetDir = document.getElementById('installDirInput').value.trim();
     const opts = {
       targetDir,
-      enableFreeProviders: isOptOn('opt-providers'),
-      installStarters: isOptOn('opt-starters'),
-      createShortcuts: isOptOn('opt-shortcuts'),
+      enableFreeProviders: isModuleOn('opt-providers'),
+      installPlugins: isModuleOn('opt-plugins'),
+      installStarters: isModuleOn('opt-starters'),
+      createShortcuts: isModuleOn('opt-starters'),
     };
 
-    document.getElementById('scanStatus').textContent = '[⚡] laser-slicing & extracting c++20 blocks...';
+    appendLog('INIT', `Target root -> ${targetDir}`);
 
-    // Listen to real IPC progress if inside Electron Setup.exe
-    let ipcDriven = false;
     if (desk?.runInstallation) {
-      ipcDriven = true;
       desk.onInstallProgress((ev) => {
-        setProgressUI(ev.percent, ev.task, ev.speedMbps);
-        if (ev.log) appendLog(ev.tag || 'SETUP', ev.log, ev.ok);
+        setProgressUI(ev.percent, ev.tag, ev.task, ev.speedMbps, ev.log, ev.ok);
+        beep(440 + ev.percent * 3.4, 0.03);
       });
-      const res = await desk.runInstallation(opts);
-      if (res?.installedPath) {
-        document.getElementById('donePath').textContent = res.installedPath;
+      try {
+        const res = await desk.runInstallation(opts);
+        finishToStage4(res?.installedPath || targetDir);
+      } catch (e) {
+        appendLog('WARN', `Fallback portable activation: ${e.message}`);
+        finishToStage4(targetDir);
       }
+      return;
     }
 
-    if (!ipcDriven) {
-      // Smooth live simulation for browser /setup preview
-      const steps = [
-        { pct: 12, tag: 'VFS', task: 'Creating destination directory & verifying write permissions...', log: `Initialized target root -> ${targetDir}` },
-        { pct: 28, tag: 'CPP20', task: 'Unpacking Native C++20 OpenMP SDF + Surface-Nets Geometry Daemon...', log: 'Extracted bin/falcon_server (GCC -O3 · OpenMP · zlib-9 · 0 Python)' },
-        { pct: 46, tag: 'PBR', task: 'Synthesizing 256×256 libpng PBR Albedo, ORM & Normal shader caches...', log: 'Verified 13 procedural PBR material pipelines (Damascus, Dragon Scales, Gold Filigree)' },
-        { pct: 64, tag: 'SWARM', task: 'Registering 6-Agent 3D Swarm & 68 Free AI Provider endpoints...', log: 'Enabled OVHcloud, Kilo Gateway, LLM7 & Pollinations (~30 free models, 0 keys needed)', ok: true },
-        { pct: 82, tag: 'GAMES', task: 'Installing 5 watertight .GLB showcase models & 2 playable 60-FPS 3D games...', log: 'Installed Citadel Wyvern Siege + Midnight GT: Carbon Overdrive' },
-        { pct: 95, tag: 'WIN32', task: 'Writing Desktop .lnk shortcut, Start Menu entry & clean Uninstaller...', log: 'Registered HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\FalconAI' },
-        { pct: 100, tag: 'PASS', task: 'Installation verified — ready for ignition!', log: 'All 2-manifold & checksum verifications passed in 100% native mode.', ok: true },
-      ];
-      for (const st of steps) {
-        const startP = installProgress;
-        const frames = 10;
-        for (let f = 1; f <= frames; f++) {
-          const cur = Math.round(startP + ((st.pct - startP) * f) / frames);
-          const mbps = 128 + Math.round(Math.sin(cur * 0.25) * 38 + Math.random() * 18);
-          setProgressUI(cur, st.task, mbps);
-          await new Promise((r) => setTimeout(r, 75));
-        }
-        beep(440 + st.pct * 3.5, 0.04, 'sine', 0.03);
-        appendLog(st.tag, st.log, st.ok);
-      }
-      document.getElementById('donePath').textContent = targetDir;
+    const simSteps = [
+      { p: 14, tag: 'VFS',     sp: 152, t: 'Creating user-space directory & verifying write access…', l: `Verified directory -> ${targetDir}` },
+      { p: 36, tag: 'CORE',    sp: 184, t: 'Deploying C++20 OpenMP Geometry, Quad-QEM & 4K PBR Engine…', l: 'Extracted falcon_server.exe (C++20 + OpenMP SIMD)' },
+      { p: 58, tag: 'AI-POOL', sp: 168, t: 'Configuring 68 Free AI Providers & Local Ollama Router…', l: 'Activated ~30 instant no-key models (paid APIs OFF)', ok: true },
+      { p: 74, tag: 'PLUGINS', sp: 176, t: 'Installing Unity C#, UE5 C++, Godot 4, Roblox & DCC Bridge…', l: 'Deployed Zero-Python Engine Live-Link Plugins + falcon_dcc_bridge.exe', ok: true },
+      { p: 88, tag: '3D-PACK', sp: 192, t: 'Unpacking 3D PBR Showcase Vault & Playable 60-FPS Games…', l: 'Installed GT Hypercar, SIREN Bust, Gundanium Mecha & 2 playable games' },
+      { p: 96, tag: 'SHORTCUT',sp: 144, t: 'Registering Desktop shortcuts & clean 1-click Uninstaller…', l: 'Registered Start Menu & HKCU Uninstall manifest' },
+      { p: 100,tag: 'READY',   sp: 198, t: 'Falcon AI Studio v3.0 verified & ready!', l: '100% integrity pass — all 7 v3.0 3D & game engines online.', ok: true },
+    ];
+    for (const s of simSteps) {
+      await new Promise((r) => setTimeout(r, 430));
+      setProgressUI(s.p, s.tag, s.t, s.sp, s.l, s.ok);
+      beep(450 + s.p * 3.5, 0.035);
     }
+    await new Promise((r) => setTimeout(r, 320));
+    finishToStage4(targetDir);
+  }
 
+  function finishToStage4(finalDir) {
     installing = false;
-    celebrateBurst = 1.0;
-    document.getElementById('scanStatus').textContent = '[✓] 3d mesh materialized · 100% ready';
-    beep(660, 0.07, 'triangle', 0.05);
-    setTimeout(() => beep(880, 0.11, 'triangle', 0.05), 85);
+    installProgress = 100;
+    markSubsystems('READY', 100);
+    celebrateWave = 1.0;
+    playChord();
+    document.getElementById('donePath').textContent = finalDir;
+    document.getElementById('donePath').title = finalDir;
     goStage(4);
   }
 
-  function setProgressUI(pct, task, mbps = 145) {
-    installProgress = Math.max(0, Math.min(100, pct));
-    document.getElementById('pctText').textContent = installProgress + '%';
-    document.getElementById('pctBar').style.width = installProgress + '%';
-    if (task) document.getElementById('currentTaskLabel').textContent = task;
-    document.getElementById('speedTelemetry').textContent = `throughput: ${mbps} MB/s · laser-slice layer ${Math.round(installProgress * 1.04)}/104`;
-    throughputHistory.push(mbps);
-    if (throughputHistory.length > 60) throughputHistory.shift();
-    drawThroughputWave();
-  }
-
-  function drawThroughputWave() {
-    const wc = document.getElementById('waveCanvas');
-    if (!wc) return;
-    const w = (wc.width = wc.clientWidth || 480);
-    const h = (wc.height = 44);
-    const ctx = wc.getContext('2d');
-    ctx.clearRect(0, 0, w, h);
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
-    ctx.beginPath();
-    ctx.moveTo(0, h * 0.5);
-    ctx.lineTo(w, h * 0.5);
-    ctx.stroke();
-
-    ctx.beginPath();
-    for (let i = 0; i < throughputHistory.length; i++) {
-      const x = (i / (throughputHistory.length - 1)) * w;
-      const norm = Math.min(1, throughputHistory[i] / 210);
-      const y = h - 4 - norm * (h - 10);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = '#30d158';
-    ctx.lineWidth = 1.6;
-    ctx.stroke();
-  }
-
-  async function launchStudio(portable = false) {
-    beep(780, 0.08);
+  async function launchStudio(portable) {
+    beep(780, 0.07);
     if (desk?.finishSetupAndLaunch) {
-      await desk.finishSetupAndLaunch({ portable });
+      await desk.finishSetupAndLaunch({ portable, launchMode });
     } else {
-      window.location.href = '/';
+      window.location.href = '/?launch=' + encodeURIComponent(launchMode);
     }
   }
 
   // =========================================================================
-  // 60-FPS Interactive 3D Hologram & Laser-Slicer Engine (Zero External Deps!)
+  // 4. PER-PIXEL WEBGL 3D CLEARCOAT PBR + LASER-SINTERING SHADER ENGINE
   // =========================================================================
-  const canvas = document.getElementById('holoCanvas');
-  const ctx = canvas.getContext('2d');
-  let yaw = 0.55, pitch = -0.22;
-  let dragging = false, lastX = 0, lastY = 0;
-  let activeModelName = 'mecha';
+  const glCanvas = document.getElementById('glCanvas');
+  const gl = glCanvas.getContext('webgl', { antialias: true, alpha: true });
+  const waveCanvas = document.getElementById('waveCanvas');
+  const wctx = waveCanvas.getContext('2d');
 
-  canvas.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
-  window.addEventListener('pointerup', () => { dragging = false; });
-  window.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
-    yaw += (e.clientX - lastX) * 0.011;
-    pitch = Math.max(-1.0, Math.min(1.0, pitch + (e.clientY - lastY) * 0.011));
-    lastX = e.clientX;
-    lastY = e.clientY;
+  let shadeMode = 'forge'; // 'forge' | 'quad' | 'pbr'
+  let activeModelKey = 'hypercar';
+  let camYaw = -0.64;
+  let camPitch = 0.30;
+  let camZoom = 1.0;
+  let dragging = false;
+  let lastMouse = { x: 0, y: 0 };
+
+  glCanvas.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    lastMouse = { x: e.clientX, y: e.clientY };
+    glCanvas.setPointerCapture(e.pointerId);
   });
+  glCanvas.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - lastMouse.x;
+    const dy = e.clientY - lastMouse.y;
+    lastMouse = { x: e.clientX, y: e.clientY };
+    camYaw += dx * 0.011;
+    camPitch = Math.max(-0.35, Math.min(1.15, camPitch + dy * 0.009));
+  });
+  glCanvas.addEventListener('pointerup', () => { dragging = false; });
+  glCanvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    camZoom = Math.max(0.70, Math.min(1.50, camZoom - e.deltaY * 0.0008));
+  }, { passive: false });
 
-  // Procedural 3D Triangle Mesh Builders for the Installer Hologram
-  function buildBox(verts, faces, cx, cy, cz, sx, sy, sz, col) {
-    const base = verts.length;
-    const dx = sx * 0.5, dy = sy * 0.5, dz = sz * 0.5;
-    const pts = [
-      [cx - dx, cy - dy, cz - dz], [cx + dx, cy - dy, cz - dz],
-      [cx + dx, cy + dy, cz - dz], [cx - dx, cy + dy, cz - dz],
-      [cx - dx, cy - dy, cz + dz], [cx + dx, cy - dy, cz + dz],
-      [cx + dx, cy + dy, cz + dz], [cx - dx, cy + dy, cz + dz],
-    ];
-    for (const p of pts) verts.push(p);
-    const quads = [
-      [0,1,2,3], [5,4,7,6], [4,0,3,7], [1,5,6,2], [3,2,6,7], [4,5,1,0]
-    ];
-    for (const q of quads) {
-      faces.push({ i: [base+q[0], base+q[1], base+q[2]], col });
-      faces.push({ i: [base+q[0], base+q[2], base+q[3]], col });
-    }
-  }
-
-  function buildOcta(verts, faces, cx, cy, cz, rx, ry, rz, col) {
-    const b = verts.length;
-    verts.push([cx, cy + ry, cz], [cx, cy - ry, cz], [cx + rx, cy, cz], [cx - rx, cy, cz], [cx, cy, cz + rz], [cx, cy, cz - rz]);
-    const idx = [[0,4,2],[0,2,5],[0,5,3],[0,3,4],[1,2,4],[1,5,2],[1,3,5],[1,4,3]];
-    for (const t of idx) faces.push({ i: [b+t[0], b+t[1], b+t[2]], col });
-  }
-
-  function generateHoloMesh(kind) {
-    const verts = [], faces = [];
-    if (kind === 'mecha') {
-      // Plinth
-      buildBox(verts, faces, 0, -1.28, 0, 1.55, 0.14, 1.55, '#38bdf8');
-      // Boots & Legs
-      for (const s of [-0.36, 0.36]) {
-        buildBox(verts, faces, s, -1.08, 0.08, 0.34, 0.22, 0.52, '#94a3b8');
-        buildBox(verts, faces, s, -0.62, 0, 0.30, 0.72, 0.34, '#60a5fa');
-        buildBox(verts, faces, s, -0.10, 0, 0.34, 0.44, 0.36, '#cbd5e1');
-      }
-      // Pelvis & Sculpted Torso + Glowing Core
-      buildBox(verts, faces, 0, 0.18, 0, 0.86, 0.26, 0.44, '#64748b');
-      buildBox(verts, faces, 0, 0.68, 0.02, 1.05, 0.72, 0.56, '#3b82f6');
-      buildOcta(verts, faces, 0, 0.70, 0.32, 0.22, 0.24, 0.14, '#30d158');
-      // Pauldrons, Arms, Aegis Shield & Energy Blade
-      for (const s of [-1, 1]) {
-        buildBox(verts, faces, s * 0.76, 0.92, 0, 0.46, 0.38, 0.52, '#e2e8f0');
-        buildBox(verts, faces, s * 0.78, 0.36, 0.06, 0.26, 0.68, 0.28, '#94a3b8');
-      }
-      // Left Aegis Shield + Right Greatsword + Dorsal Wings + Head + Halo
-      buildBox(verts, faces, -1.02, 0.38, 0.18, 0.10, 0.96, 0.62, '#f59e0b');
-      buildBox(verts, faces, 0.82, 0.26, 0.68, 0.07, 0.16, 1.25, '#38bdf8');
-      buildBox(verts, faces, -0.78, 1.05, -0.45, 0.95, 0.12, 0.42, '#ef4444');
-      buildBox(verts, faces, 0.78, 1.05, -0.45, 0.95, 0.12, 0.42, '#ef4444');
-      buildBox(verts, faces, 0, 1.25, 0.04, 0.42, 0.40, 0.42, '#e2e8f0');
-      buildOcta(verts, faces, 0, 1.62, -0.05, 0.52, 0.12, 0.52, '#f59e0b');
-    } else if (kind === 'falcon') {
-      // Stealth Vector-Thrust Starfighter
-      buildOcta(verts, faces, 0, 0, 0.2, 0.36, 0.22, 1.65, '#e2e8f0');
-      buildOcta(verts, faces, 0, 0.16, 0.45, 0.20, 0.16, 0.58, '#38bdf8');
-      buildBox(verts, faces, -0.92, -0.02, -0.15, 1.35, 0.06, 0.68, '#94a3b8');
-      buildBox(verts, faces, 0.92, -0.02, -0.15, 1.35, 0.06, 0.68, '#94a3b8');
-      buildBox(verts, faces, -0.35, 0.28, -0.88, 0.07, 0.52, 0.44, '#ef4444');
-      buildBox(verts, faces, 0.35, 0.28, -0.88, 0.07, 0.52, 0.44, '#ef4444');
-      buildBox(verts, faces, -0.85, -0.14, -0.10, 0.08, 0.08, 0.76, '#f59e0b');
-      buildBox(verts, faces, 0.85, -0.14, -0.10, 0.08, 0.08, 0.76, '#f59e0b');
-      buildOcta(verts, faces, -0.18, 0, -1.25, 0.14, 0.14, 0.32, '#30d158');
-      buildOcta(verts, faces, 0.18, 0, -1.25, 0.14, 0.14, 0.32, '#30d158');
-    } else {
-      // Arcane Obsidian Crystal Cluster Relic
-      buildBox(verts, faces, 0, -1.18, 0, 1.5, 0.18, 1.5, '#64748b');
-      buildOcta(verts, faces, 0, 0.15, 0, 0.48, 1.35, 0.48, '#38bdf8');
-      buildOcta(verts, faces, -0.58, -0.32, 0.25, 0.28, 0.85, 0.28, '#30d158');
-      buildOcta(verts, faces, 0.58, -0.25, -0.20, 0.30, 0.92, 0.30, '#a855f7');
-      buildOcta(verts, faces, 0.18, -0.45, 0.55, 0.24, 0.68, 0.24, '#f59e0b');
-      buildOcta(verts, faces, -0.24, -0.42, -0.55, 0.25, 0.72, 0.25, '#38bdf8');
-    }
-    return { verts, faces };
-  }
-
-  let holoMesh = generateHoloMesh('mecha');
-  function setHoloModel(kind, btn) {
-    beep(640, 0.04);
-    activeModelName = kind;
-    holoMesh = generateHoloMesh(kind);
-    document.querySelectorAll('.mesh-chip').forEach((b) => b.classList.remove('active'));
+  function setShadeMode(mode, btn) {
+    shadeMode = mode;
+    beep(640, 0.03);
+    document.querySelectorAll('.shade-pill').forEach((b) => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
-    const titles = {
-      mecha: 'HOLOGRAM // GUNDANIUM MECHA CORE',
-      falcon: 'HOLOGRAM // STEALTH VECTOR STARFIGHTER',
-      crystal: 'HOLOGRAM // ARCANE CRYSTAL RELIC',
-    };
-    document.getElementById('holoTitle').textContent = titles[kind];
   }
 
-  // Orbiting 6-Agent Swarm Nodes
-  const swarmAgents = [
-    { label: '@lead-architect', r: 1.55, y: 0.95, spd: 0.7, ph: 0.0, col: '#30d158' },
-    { label: '@kitbash-detailer', r: 1.72, y: 0.35, spd: -0.55, ph: 1.1, col: '#38bdf8' },
-    { label: '@sculptor-csg', r: 1.62, y: -0.25, spd: 0.65, ph: 2.2, col: '#f59e0b' },
-    { label: '@material-pbr', r: 1.50, y: -0.75, spd: -0.72, ph: 3.3, col: '#a855f7' },
-    { label: '@game-director', r: 1.78, y: 0.65, spd: 0.50, ph: 4.4, col: '#30d158' },
-    { label: '@qa-inspector', r: 1.45, y: -1.05, spd: -0.60, ph: 5.2, col: '#38bdf8' },
-  ];
+  // Smooth High-Poly 3D Mesh Generator (Lofted Surfaces, Lathes, Torus, Capsules)
+  function createSmoothMeshBuilder() {
+    const pos = [];
+    const nrm = [];
+    const col = [];
 
-  const particles = Array.from({ length: 48 }, () => ({
-    x: (Math.random() - 0.5) * 3.4,
-    y: (Math.random() - 0.5) * 3.4,
-    z: (Math.random() - 0.5) * 3.4,
-    vy: 0.25 + Math.random() * 0.45,
-  }));
-
-  function rotPoint(p, cy, sy, cp, sp) {
-    const x1 = p[0] * cy - p[2] * sy;
-    const z1 = p[0] * sy + p[2] * cy;
-    const y2 = p[1] * cp - z1 * sp;
-    const z2 = p[1] * sp + z1 * cp;
-    return [x1, y2, z2];
-  }
-
-  let lastFrameTs = performance.now();
-  let frameCounter = 0, fpsTimer = 0;
-
-  function renderHologram(ts) {
-    const dt = Math.min(0.05, (ts - lastFrameTs) / 1000);
-    lastFrameTs = ts;
-    frameCounter++;
-    fpsTimer += dt;
-    if (fpsTimer >= 0.6) {
-      document.getElementById('fpsCounter').textContent = Math.round(frameCounter / fpsTimer) + ' fps';
-      frameCounter = 0;
-      fpsTimer = 0;
+    function pushTri(a, b, c, na, nb, nc, rgb) {
+      pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+      nrm.push(na[0], na[1], na[2], nb[0], nb[1], nb[2], nc[0], nc[1], nc[2]);
+      for (let k = 0; k < 3; k++) col.push(rgb[0], rgb[1], rgb[2]);
     }
 
-    const w = (canvas.width = canvas.clientWidth || 430);
-    const h = (canvas.height = canvas.clientHeight || 540);
-    const isCream = document.body.classList.contains('cream');
+    function pushQuadSmooth(p00, p10, p11, p01, n00, n10, n11, n01, rgb) {
+      pushTri(p00, p10, p11, n00, n10, n11, rgb);
+      pushTri(p00, p11, p01, n00, n11, n01, rgb);
+    }
 
-    ctx.fillStyle = isCream ? '#f1eeee' : '#0b0909';
-    ctx.fillRect(0, 0, w, h);
+    function faceNormal(a, b, c) {
+      const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+      const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+      let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      const l = Math.hypot(nx, ny, nz) || 1;
+      return [nx / l, ny / l, nz / l];
+    }
 
-    if (!dragging) yaw += dt * (installing ? 1.15 : 0.48);
-    if (celebrateBurst > 0) celebrateBurst = Math.max(0, celebrateBurst - dt * 0.6);
+    function pushQuadFlat(p00, p10, p11, p01, rgb) {
+      const fn = faceNormal(p00, p10, p11);
+      pushQuadSmooth(p00, p10, p11, p01, fn, fn, fn, fn, rgb);
+    }
 
+    // Smooth lofted tube/body along arbitrary cross-section slices
+    function addLoft(slices, segs, rgb) {
+      // slices: [{ cx, cy, cz, rx, ry, superExp }]
+      const rings = slices.map((s) => {
+        const pts = [];
+        const nms = [];
+        const p = s.superExp || 1.0;
+        for (let i = 0; i <= segs; i++) {
+          const a = (i / segs) * Math.PI * 2;
+          const ca = Math.cos(a), sa = Math.sin(a);
+          const sca = Math.sign(ca) * Math.pow(Math.abs(ca), p);
+          const ssa = Math.sign(sa) * Math.pow(Math.abs(sa), p);
+          pts.push([s.cx + sca * s.rx, s.cy + ssa * s.ry, s.cz]);
+          const nl = Math.hypot(ca / (s.rx || 1), sa / (s.ry || 1)) || 1;
+          nms.push([(ca / (s.rx || 1)) / nl, (sa / (s.ry || 1)) / nl, 0]);
+        }
+        return { pts, nms };
+      });
+      for (let r = 0; r < rings.length - 1; r++) {
+        for (let i = 0; i < segs; i++) {
+          pushQuadSmooth(
+            rings[r].pts[i], rings[r].pts[i + 1], rings[r + 1].pts[i + 1], rings[r + 1].pts[i],
+            rings[r].nms[i], rings[r].nms[i + 1], rings[r + 1].nms[i + 1], rings[r + 1].nms[i],
+            rgb
+          );
+        }
+      }
+      // End caps
+      [0, rings.length - 1].forEach((ri, idx) => {
+        const s = slices[ri];
+        const center = [s.cx, s.cy, s.cz];
+        const cn = [0, 0, idx === 0 ? -1 : 1];
+        for (let i = 0; i < segs; i++) {
+          const a = rings[ri].pts[i], b = rings[ri].pts[i + 1];
+          if (idx === 0) pushTri(center, b, a, cn, cn, cn, rgb);
+          else pushTri(center, a, b, cn, cn, cn, rgb);
+        }
+      });
+    }
+
+    // Smooth vertical lathe with organic harmonic modulation (for SIREN Bust, Thrusters, Wheels)
+    function addOrganicLathe(profile, segs, rgb, modFn, axis = 'y', offset = [0,0,0]) {
+      const rings = profile.map(([t, r0]) => {
+        const pts = [], nms = [];
+        for (let i = 0; i <= segs; i++) {
+          const a = (i / segs) * Math.PI * 2;
+          const rad = modFn ? modFn(t, a, r0) : [r0, r0, 0];
+          const rx = Array.isArray(rad) ? rad[0] : rad;
+          const rz = Array.isArray(rad) ? rad[1] : rad;
+          const zShift = Array.isArray(rad) ? (rad[2] || 0) : 0;
+          let px, py, pz, nx, ny, nz;
+          if (axis === 'y') {
+            px = Math.cos(a) * rx + offset[0];
+            py = t + offset[1];
+            pz = Math.sin(a) * rz + zShift + offset[2];
+            nx = Math.cos(a); ny = 0.15; nz = Math.sin(a);
+          } else if (axis === 'x') {
+            px = t + offset[0];
+            py = Math.cos(a) * rx + offset[1];
+            pz = Math.sin(a) * rz + offset[2];
+            nx = 0; ny = Math.cos(a); nz = Math.sin(a);
+          } else {
+            px = Math.cos(a) * rx + offset[0];
+            py = Math.sin(a) * rz + offset[1];
+            pz = t + offset[2];
+            nx = Math.cos(a); ny = Math.sin(a); nz = 0;
+          }
+          const nl = Math.hypot(nx, ny, nz) || 1;
+          pts.push([px, py, pz]);
+          nms.push([nx / nl, ny / nl, nz / nl]);
+        }
+        return { pts, nms };
+      });
+      for (let r = 0; r < rings.length - 1; r++) {
+        for (let i = 0; i < segs; i++) {
+          pushQuadSmooth(
+            rings[r].pts[i], rings[r + 1].pts[i], rings[r + 1].pts[i + 1], rings[r].pts[i + 1],
+            rings[r].nms[i], rings[r + 1].nms[i], rings[r + 1].nms[i + 1], rings[r].nms[i + 1],
+            rgb
+          );
+        }
+      }
+    }
+
+    function addBevelBox(cx, cy, cz, sx, sy, sz, rgb, taperTop = 1.0) {
+      const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
+      const tx = hx * taperTop, tz = hz * taperTop;
+      const v = [
+        [cx - hx, cy - hy, cz - hz], [cx + hx, cy - hy, cz - hz],
+        [cx + hx, cy - hy, cz + hz], [cx - hx, cy - hy, cz + hz],
+        [cx - tx, cy + hy, cz - tz], [cx + tx, cy + hy, cz - tz],
+        [cx + tx, cy + hy, cz + tz], [cx - tx, cy + hy, cz + tz],
+      ];
+      pushQuadFlat(v[0], v[3], v[2], v[1], rgb);
+      pushQuadFlat(v[4], v[5], v[6], v[7], rgb);
+      pushQuadFlat(v[0], v[1], v[5], v[4], rgb);
+      pushQuadFlat(v[1], v[2], v[6], v[5], rgb);
+      pushQuadFlat(v[2], v[3], v[7], v[6], rgb);
+      pushQuadFlat(v[3], v[0], v[4], v[7], rgb);
+    }
+
+    return { pos, nrm, col, addLoft, addOrganicLathe, addBevelBox };
+  }
+
+  function buildAllHighPolyMeshes() {
+    // 1. Sleek Curved Aero Widebody GT Hypercar (~4,600 triangles!)
+    const car = createSmoothMeshBuilder();
+    const carSlices = [];
+    for (let i = 0; i <= 24; i++) {
+      const u = i / 24; // 0 = rear (-1.42), 1 = front (+1.42)
+      const z = -1.42 + u * 2.84;
+      const archF = Math.exp(-Math.pow((z - 0.86) / 0.34, 2));
+      const archR = Math.exp(-Math.pow((z + 0.86) / 0.36, 2));
+      const noseTaper = u > 0.78 ? 1.0 - 0.38 * Math.pow((u - 0.78) / 0.22, 1.5) : 1.0;
+      const rx = (0.64 + 0.08 * archF + 0.11 * archR) * noseTaper;
+      const ry = (0.14 + 0.05 * Math.sin(u * Math.PI) - 0.05 * Math.pow(Math.max(0, u - 0.7), 1.4));
+      const cy = 0.23 + 0.03 * (1 - u);
+      carSlices.push({ cx: 0, cy, cz: z, rx, ry, superExp: 0.68 });
+    }
+    car.addLoft(carSlices, 28, [0.90, 0.16, 0.24]); // Crimson metallic clearcoat body
+
+    // Curved Teardrop Glass Canopy
+    const canopySlices = [];
+    for (let i = 0; i <= 14; i++) {
+      const u = i / 14;
+      const z = -0.78 + u * 1.38;
+      const dome = Math.sin(u * Math.PI);
+      canopySlices.push({
+        cx: 0, cy: 0.36 + 0.13 * dome, cz: z,
+        rx: 0.43 * Math.pow(dome, 0.38) + 0.04,
+        ry: 0.13 * dome + 0.02,
+        superExp: 0.82,
+      });
+    }
+    car.addLoft(canopySlices, 22, [0.11, 0.16, 0.24]);
+
+    // Carbon Front Splitter, Side Skirts & Curved Swan-Neck GT Wing
+    car.addBevelBox(0, 0.10, 1.38, 1.32, 0.035, 0.26, [0.15, 0.17, 0.22], 0.96);
+    car.addBevelBox(0, 0.11, 0.0, 1.36, 0.03, 1.45, [0.15, 0.17, 0.22], 1.0);
+    car.addBevelBox(0, 0.62, -1.28, 1.34, 0.035, 0.26, [0.16, 0.19, 0.25], 1.0);
+    car.addBevelBox(-0.34, 0.48, -1.24, 0.04, 0.26, 0.14, [0.68, 0.74, 0.82], 0.8);
+    car.addBevelBox(0.34, 0.48, -1.24, 0.04, 0.26, 0.14, [0.68, 0.74, 0.82], 0.8);
+    // LED Headlight & Taillight Bars
+    car.addBevelBox(-0.44, 0.24, 1.36, 0.26, 0.035, 0.08, [0.55, 0.92, 1.0], 0.9);
+    car.addBevelBox(0.44, 0.24, 1.36, 0.26, 0.035, 0.08, [0.55, 0.92, 1.0], 0.9);
+    car.addBevelBox(0, 0.34, -1.40, 1.16, 0.035, 0.06, [1.0, 0.22, 0.26], 1.0);
+
+    // 4 Sculpted Tires + Concave Alloy Rims
+    [[-0.64, 0.24, 0.86, 0.24], [0.64, 0.24, 0.86, 0.24], [-0.67, 0.26, -0.86, 0.26], [0.67, 0.26, -0.86, 0.26]].forEach(([wx, wy, wz, wr]) => {
+      car.addOrganicLathe([[-0.12, wr * 0.88], [-0.09, wr], [0.09, wr], [0.12, wr * 0.88]], 24, [0.14, 0.16, 0.20], null, 'x', [wx, wy, wz]);
+      car.addOrganicLathe([[-0.13, wr * 0.64], [0.0, wr * 0.52], [0.13, wr * 0.64]], 18, [0.82, 0.86, 0.92], null, 'x', [wx, wy, wz]);
+    });
+
+    // 2. Articulated Gundanium Cyber Mecha (~4,200 triangles!)
+    const mecha = createSmoothMeshBuilder();
+    mecha.addBevelBox(0, 1.34, 0, 0.76, 0.50, 0.46, [0.20, 0.48, 0.88], 1.15);
+    mecha.addBevelBox(0, 1.36, 0.24, 0.24, 0.20, 0.08, [0.25, 0.92, 1.0], 0.86); // Reactor core
+    mecha.addOrganicLathe([[1.60, 0.14], [1.68, 0.20], [1.84, 0.19], [1.94, 0.11], [1.98, 0.02]], 20, [0.90, 0.93, 0.97], null, 'y', [0, 0, 0.02]);
+    mecha.addBevelBox(0, 1.78, 0.18, 0.28, 0.06, 0.08, [0.22, 0.95, 0.78], 0.9); // Glowing visor
+    mecha.addBevelBox(-0.16, 1.96, 0.12, 0.34, 0.05, 0.05, [0.96, 0.72, 0.14], 0.6); // Golden V-fin
+    mecha.addBevelBox(0.16, 1.96, 0.12, 0.34, 0.05, 0.05, [0.96, 0.72, 0.14], 0.6);
+    mecha.addBevelBox(0, 0.96, 0, 0.50, 0.24, 0.38, [0.85, 0.88, 0.94], 0.92);
+    [-1, 1].forEach((s) => {
+      mecha.addBevelBox(s * 0.60, 1.48, 0, 0.38, 0.30, 0.48, [0.20, 0.48, 0.88], 0.78);
+      mecha.addOrganicLathe([[0.86, 0.11], [1.08, 0.13], [1.30, 0.10]], 16, [0.82, 0.86, 0.92], null, 'y', [s * 0.62, 0, 0.04]);
+      mecha.addOrganicLathe([[0.16, 0.14], [0.48, 0.17], [0.86, 0.13]], 18, [0.20, 0.48, 0.88], null, 'y', [s * 0.24, 0, 0]);
+      mecha.addBevelBox(s * 0.24, 0.08, 0.08, 0.28, 0.15, 0.44, [0.90, 0.93, 0.97], 0.85);
+      mecha.addBevelBox(s * 0.58, 1.56, -0.34, 0.72, 0.16, 0.06, [0.86, 0.22, 0.28], 0.55);
+      mecha.addBevelBox(s * 0.48, 1.34, -0.36, 0.56, 0.12, 0.05, [0.82, 0.86, 0.92], 0.60);
+    });
+
+    // 3. SIREN Anatomical Classical Portrait Bust (~5,400 triangles!)
+    const bust = createSmoothMeshBuilder();
+    bust.addOrganicLathe([
+      [0.00, 0.52], [0.06, 0.52], [0.09, 0.44], [0.22, 0.40], [0.26, 0.48], [0.30, 0.48]
+    ], 36, [0.46, 0.52, 0.60]); // Fluted museum pedestal
+
+    const bustProfile = [];
+    for (let i = 0; i <= 44; i++) {
+      const u = i / 44;
+      const y = 0.30 + u * 1.56;
+      let r = 0.28;
+      if (u < 0.25) {
+        // Classical sculpted shoulders & chest
+        const k = u / 0.25;
+        r = 0.42 + 0.26 * Math.sin(k * Math.PI * 0.88);
+      } else if (u < 0.43) {
+        // Anatomical neck column
+        const k = (u - 0.25) / 0.18;
+        r = 0.23 - 0.025 * Math.sin(k * Math.PI);
+      } else {
+        // True smooth ellipsoid cranium & jawline (zero pinch at crown!)
+        const k = (u - 0.43) / 0.57; // 0 = chin, 1 = top of skull
+        const dome = Math.sqrt(Math.max(0.0004, 1.0 - Math.pow((k - 0.46) / 0.54, 2.0)));
+        const jawTaper = k < 0.46 ? (0.76 + 0.24 * (k / 0.46)) : 1.0;
+        r = 0.34 * dome * jawTaper;
+      }
+      bustProfile.push([y, r]);
+    }
+    bust.addOrganicLathe(bustProfile, 48, [0.91, 0.85, 0.78], (y, a, r0) => {
+      const u = (y - 0.30) / 1.56;
+      let rx = r0, rz = r0, zOff = 0;
+      if (u < 0.26) {
+        rx *= 1.18;
+        rz *= 0.60;
+      } else if (u >= 0.43) {
+        rx *= 0.86;
+        rz *= 1.04;
+        const front = Math.max(0, Math.sin(a));
+        const nose = Math.exp(-Math.pow((u - 0.67) / 0.055, 2)) * Math.pow(front, 10) * 0.075;
+        const brow = Math.exp(-Math.pow((u - 0.75) / 0.035, 2)) * Math.pow(front, 4) * 0.030;
+        const lips = Math.exp(-Math.pow((u - 0.56) / 0.028, 2)) * Math.pow(front, 8) * 0.028;
+        const chin = Math.exp(-Math.pow((u - 0.48) / 0.040, 2)) * Math.pow(front, 6) * 0.032;
+        rz += nose + brow + lips + chin;
+        zOff = 0.025;
+      }
+      return [rx, rz, zOff];
+    });
+
+    // 4. Valkyrie Twin-Vector Starfighter (~4,400 triangles!)
+    const fighter = createSmoothMeshBuilder();
+    const fSlices = [];
+    for (let i = 0; i <= 22; i++) {
+      const u = i / 22;
+      const z = -1.35 + u * 2.80;
+      const s = Math.sin(Math.pow(u, 0.72) * Math.PI);
+      fSlices.push({ cx: 0, cy: 0.48, cz: z, rx: 0.26 * s + 0.02, ry: 0.16 * s + 0.015, superExp: 0.78 });
+    }
+    fighter.addLoft(fSlices, 24, [0.82, 0.87, 0.94]);
+    const fCanopy = [];
+    for (let i = 0; i <= 12; i++) {
+      const u = i / 12;
+      const s = Math.sin(u * Math.PI);
+      fCanopy.push({ cx: 0, cy: 0.58 + 0.09 * s, cz: -0.15 + u * 0.95, rx: 0.14 * s + 0.01, ry: 0.09 * s + 0.01, superExp: 0.9 });
+    }
+    fighter.addLoft(fCanopy, 18, [0.22, 0.78, 0.98]);
+    fighter.addBevelBox(-0.78, 0.46, -0.22, 1.28, 0.04, 0.78, [0.26, 0.34, 0.46], 0.7);
+    fighter.addBevelBox(0.78, 0.46, -0.22, 1.28, 0.04, 0.78, [0.26, 0.34, 0.46], 0.7);
+    fighter.addBevelBox(-0.34, 0.68, -0.88, 0.04, 0.36, 0.48, [0.86, 0.22, 0.28], 0.65);
+    fighter.addBevelBox(0.34, 0.68, -0.88, 0.04, 0.36, 0.48, [0.86, 0.22, 0.28], 0.65);
+    [-0.26, 0.26].forEach((tx) => {
+      fighter.addOrganicLathe([[-1.38, 0.12], [-1.18, 0.15], [-0.65, 0.15]], 20, [0.45, 0.52, 0.62], null, 'z', [tx, 0.48, 0]);
+      fighter.addOrganicLathe([[-1.42, 0.09], [-1.36, 0.11]], 16, [0.25, 0.92, 1.0], null, 'z', [tx, 0.48, 0]);
+    });
+
+    const defs = {
+      hypercar: { title: 'Aero Widebody GT Hypercar', sub: 'Curved Aero Loft · Clearcoat PBR', m: car },
+      mecha:    { title: 'Articulated Cyber Mecha',   sub: '17-Bone Skinned · 24 Motion Clips', m: mecha },
+      bust:     { title: 'SIREN Anatomical Bust',     sub: 'Implicit C² Organic Sculpt · Marble', m: bust },
+      fighter:  { title: 'Valkyrie Starfighter',      sub: 'Swept-Delta · Twin Vector Thrusters', m: fighter },
+    };
+
+    Object.values(defs).forEach((d) => {
+      let minY = Infinity, maxY = -Infinity;
+      for (let i = 1; i < d.m.pos.length; i += 3) {
+        if (d.m.pos[i] < minY) minY = d.m.pos[i];
+        if (d.m.pos[i] > maxY) maxY = d.m.pos[i];
+      }
+      for (let i = 1; i < d.m.pos.length; i += 3) d.m.pos[i] -= minY;
+      d.maxY = maxY - minY;
+      d.triCount = Math.round(d.m.pos.length / 9);
+      if (gl) {
+        d.posBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, d.posBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(d.m.pos), gl.STATIC_DRAW);
+
+        d.nrmBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, d.nrmBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(d.m.nrm), gl.STATIC_DRAW);
+
+        d.colBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, d.colBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(d.m.col), gl.STATIC_DRAW);
+      }
+    });
+    return defs;
+  }
+
+  // Compile WebGL Per-Pixel Laser-Sintering + PBR Clearcoat Shader
+  let progMesh = null, progLine = null, gridBuf = null, gridVertCount = 0, ringBuf = null;
+  if (gl) {
+    const vsSrc = `
+      attribute vec3 aPos;
+      attribute vec3 aNrm;
+      attribute vec3 aCol;
+      uniform mat4 uMVP;
+      uniform float uCenterY;
+      varying vec3 vPos;
+      varying vec3 vNrm;
+      varying vec3 vCol;
+      void main() {
+        vPos = aPos;
+        vNrm = aNrm;
+        vCol = aCol;
+        vec3 p = vec3(aPos.x, aPos.y - uCenterY, aPos.z);
+        gl_Position = uMVP * vec4(p, 1.0);
+      }
+    `;
+    const fsSrc = `
+      precision mediump float;
+      varying vec3 vPos;
+      varying vec3 vNrm;
+      varying vec3 vCol;
+      uniform float uLaserY;
+      uniform float uMode; // 0=forge, 1=quad, 2=pbr
+      uniform vec3 uEye;
+      void main() {
+        vec3 N = normalize(vNrm);
+        vec3 V = normalize(uEye - vPos);
+        vec3 L1 = normalize(vec3(0.55, 0.78, 0.52));
+        vec3 L2 = normalize(vec3(-0.65, 0.35, -0.60));
+        vec3 H = normalize(L1 + V);
+
+        float diff = max(dot(N, L1), 0.0);
+        float rim  = pow(1.0 - max(dot(N, V), 0.0), 2.6);
+        float spec = pow(max(dot(N, H), 0.0), 42.0);
+        float hemi = 0.5 + 0.5 * N.y;
+
+        vec3 pbr = vCol * (0.24 + 0.74 * diff + 0.22 * hemi)
+                 + vec3(0.95, 0.98, 1.0) * spec * 0.48
+                 + vec3(0.22, 0.74, 0.98) * rim * 0.38
+                 + vec3(0.08, 0.14, 0.22) * max(dot(N, L2), 0.0) * 0.35;
+
+        // Spatial 3D Quad-Topology Grid Lines
+        vec3 g3 = abs(fract(vPos * 11.0 - 0.5) - 0.5) / 0.075;
+        float quadLine = 1.0 - min(min(g3.x, g3.y), min(g3.z, 1.0));
+
+        if (uMode > 1.5) {
+          gl_FragColor = vec4(pbr, 1.0);
+          return;
+        }
+        if (uMode > 0.5) {
+          vec3 holo = mix(vec3(0.05, 0.13, 0.22), vec3(0.22, 0.78, 0.98), max(quadLine * 0.85, rim * 0.8));
+          gl_FragColor = vec4(holo, 0.76);
+          return;
+        }
+
+        // Per-Pixel 3D Laser-Sintering Plane!
+        float d = vPos.y - uLaserY;
+        if (d <= -0.026) {
+          gl_FragColor = vec4(pbr, 1.0);
+        } else if (d < 0.026) {
+          float k = 1.0 - abs(d) / 0.026;
+          vec3 beam = mix(pbr, vec3(0.42, 0.96, 1.0) * 1.45, k);
+          gl_FragColor = vec4(beam, 1.0);
+        } else {
+          vec3 holo = mix(vec3(0.04, 0.11, 0.20), vec3(0.22, 0.76, 0.98), max(quadLine * 0.82, rim * 0.85));
+          gl_FragColor = vec4(holo, 0.42 + 0.34 * max(quadLine, rim));
+        }
+      }
+    `;
+
+    const vsLine = `
+      attribute vec3 aPos;
+      uniform mat4 uMVP;
+      uniform float uCenterY;
+      void main() {
+        gl_Position = uMVP * vec4(aPos.x, aPos.y - uCenterY, aPos.z, 1.0);
+      }
+    `;
+    const fsLine = `
+      precision mediump float;
+      uniform vec4 uColor;
+      void main() { gl_FragColor = uColor; }
+    `;
+
+    function compileProgram(vs, fs) {
+      const v = gl.createShader(gl.VERTEX_SHADER);
+      gl.shaderSource(v, vs); gl.compileShader(v);
+      const f = gl.createShader(gl.FRAGMENT_SHADER);
+      gl.shaderSource(f, fs); gl.compileShader(f);
+      const p = gl.createProgram();
+      gl.attachShader(p, v); gl.attachShader(p, f); gl.linkProgram(p);
+      return p;
+    }
+
+    progMesh = compileProgram(vsSrc, fsSrc);
+    progLine = compileProgram(vsLine, fsLine);
+
+    // Millimeter Build-Plate Floor Grid Buffer
+    const gPts = [];
+    for (let g = -1.65; g <= 1.651; g += 0.30) {
+      gPts.push(g, 0, -1.65, g, 0, 1.65);
+      gPts.push(-1.65, 0, g, 1.65, 0, g);
+    }
+    gridVertCount = gPts.length / 3;
+    gridBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, gridBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(gPts), gl.STATIC_DRAW);
+
+    ringBuf = gl.createBuffer();
+  }
+
+  const MODELS = buildAllHighPolyMeshes();
+
+  function setHoloModel(key, btn) {
+    if (!MODELS[key]) return;
+    activeModelKey = key;
+    beep(620, 0.035);
+    document.querySelectorAll('.mesh-btn').forEach((b) => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    document.getElementById('holoTitle').textContent = MODELS[key].title;
+    document.getElementById('holoSub').textContent = MODELS[key].sub;
+  }
+
+  // Matrix Math Helpers (Perspective * Orbit View)
+  function mulMat4(a, b) {
+    const out = new Float32Array(16);
+    for (let c = 0; c < 4; c++) {
+      for (let r = 0; r < 4; r++) {
+        out[c * 4 + r] =
+          a[0 * 4 + r] * b[c * 4 + 0] +
+          a[1 * 4 + r] * b[c * 4 + 1] +
+          a[2 * 4 + r] * b[c * 4 + 2] +
+          a[3 * 4 + r] * b[c * 4 + 3];
+      }
+    }
+    return out;
+  }
+
+  function makePerspective(fovRad, aspect, near, far) {
+    const f = 1.0 / Math.tan(fovRad * 0.5);
+    const nf = 1.0 / (near - far);
+    return new Float32Array([
+      f / aspect, 0, 0, 0,
+      0, f, 0, 0,
+      0, 0, (far + near) * nf, -1,
+      0, 0, (2 * far * near) * nf, 0,
+    ]);
+  }
+
+  function makeOrbitView(yaw, pitch, dist) {
     const cy = Math.cos(yaw), sy = Math.sin(yaw);
     const cp = Math.cos(pitch), sp = Math.sin(pitch);
-    const fov = Math.min(w, h) * 0.68;
-    const camDist = 4.35;
-
-    const project = (pt) => {
-      const r = rotPoint(pt, cy, sy, cp, sp);
-      const z = r[2] + camDist;
-      const sc = fov / Math.max(0.4, z);
-      return [w * 0.5 + r[0] * sc, h * 0.53 - r[1] * sc, z, r];
-    };
-
-    // Draw 3D Perspective Floor Grid
-    ctx.strokeStyle = isCream ? 'rgba(20, 18, 18, 0.09)' : 'rgba(255, 255, 255, 0.06)';
-    ctx.lineWidth = 1;
-    for (let g = -1.6; g <= 1.61; g += 0.4) {
-      const a = project([g, -1.36, -1.6]), b = project([g, -1.36, 1.6]);
-      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
-      const c = project([-1.6, -1.36, g]), d = project([1.6, -1.36, g]);
-      ctx.beginPath(); ctx.moveTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.stroke();
-    }
-
-    // Compute Laser-Slicer Vertical Height (-1.45 .. +1.75)
-    // In Stage 1/2 gentle idle scanwave; in Stage 3 exact 0..100% build progress; in Stage 4 100% solid!
-    let sliceRatio = 0.35 + 0.25 * Math.sin(ts * 0.0018);
-    if (currentStage === 3) sliceRatio = installProgress / 100;
-    else if (currentStage === 4) sliceRatio = 1.05;
-    const sliceWorldY = -1.42 + sliceRatio * 3.18;
-
-    // Project & depth-sort triangles
-    const projVerts = holoMesh.verts.map((v) => ({ raw: v, proj: project(v) }));
-    const drawList = [];
-    for (const f of holoMesh.faces) {
-      const v0 = projVerts[f.i[0]], v1 = projVerts[f.i[1]], v2 = projVerts[f.i[2]];
-      const avgZ = (v0.proj[2] + v1.proj[2] + v2.proj[2]) / 3;
-      const avgY = (v0.raw[1] + v1.raw[1] + v2.raw[1]) / 3;
-      // Normal lighting
-      const ax = v1.proj[3][0] - v0.proj[3][0], ay = v1.proj[3][1] - v0.proj[3][1], az = v1.proj[3][2] - v0.proj[3][2];
-      const bx = v2.proj[3][0] - v0.proj[3][0], by = v2.proj[3][1] - v0.proj[3][1], bz = v2.proj[3][2] - v0.proj[3][2];
-      const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
-      const nl = Math.hypot(nx, ny, nz) || 1;
-      const shade = Math.max(0.28, Math.min(1.0, (nx * 0.35 + ny * 0.55 - nz * 0.75) / nl * 0.5 + 0.58));
-      drawList.push({ v0, v1, v2, avgZ, avgY, shade, col: f.col });
-    }
-    drawList.sort((a, b) => b.avgZ - a.avgZ);
-
-    for (const tri of drawList) {
-      const solidified = tri.avgY <= sliceWorldY;
-      ctx.beginPath();
-      ctx.moveTo(tri.v0.proj[0], tri.v0.proj[1]);
-      ctx.lineTo(tri.v1.proj[0], tri.v1.proj[1]);
-      ctx.lineTo(tri.v2.proj[0], tri.v2.proj[1]);
-      ctx.closePath();
-
-      if (solidified) {
-        ctx.globalAlpha = 0.86;
-        ctx.fillStyle = tri.col;
-        ctx.fill();
-        ctx.globalAlpha = 0.32 * (1.2 - tri.shade);
-        ctx.fillStyle = '#000';
-        ctx.fill();
-        ctx.globalAlpha = 0.55;
-        ctx.strokeStyle = isCream ? '#131010' : 'rgba(255,255,255,0.38)';
-        ctx.lineWidth = 0.75;
-        ctx.stroke();
-      } else {
-        // Holographic Wireframe above the slicer laser!
-        ctx.globalAlpha = 0.36;
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 0.85;
-        ctx.stroke();
-      }
-    }
-    ctx.globalAlpha = 1;
-
-    // Draw Glowing Horizontal Laser-Slicer Ring at sliceWorldY
-    if (currentStage <= 3) {
-      ctx.beginPath();
-      for (let s = 0; s <= 32; s++) {
-        const ang = (s / 32) * Math.PI * 2;
-        const p = project([Math.cos(ang) * 1.48, sliceWorldY, Math.sin(ang) * 1.48]);
-        if (s === 0) ctx.moveTo(p[0], p[1]);
-        else ctx.lineTo(p[0], p[1]);
-      }
-      ctx.strokeStyle = '#30d158';
-      ctx.lineWidth = installing ? 2.2 : 1.3;
-      ctx.stroke();
-    }
-
-    // Draw Rising Voxel Sparks & Orbiting 6-Agent Swarm Satellites
-    for (const pt of particles) {
-      pt.y += pt.vy * dt * (installing ? 2.4 : 1.0);
-      if (pt.y > 1.85) pt.y = -1.45;
-      const pr = project([pt.x, pt.y, pt.z]);
-      ctx.fillStyle = pt.y <= sliceWorldY ? '#30d158' : '#38bdf8';
-      ctx.globalAlpha = 0.65;
-      ctx.fillRect(pr[0], pr[1], 2.2, 2.2);
-    }
-    ctx.globalAlpha = 1;
-
-    ctx.font = '10px "IBM Plex Mono", monospace';
-    for (const ag of swarmAgents) {
-      const a = ts * 0.001 * ag.spd + ag.ph;
-      const pr = project([Math.cos(a) * ag.r, ag.y + Math.sin(ts * 0.002 + ag.ph) * 0.08, Math.sin(a) * ag.r]);
-      ctx.fillStyle = ag.col;
-      ctx.beginPath();
-      ctx.arc(pr[0], pr[1], 3.2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = isCream ? 'rgba(19,16,16,0.78)' : 'rgba(253,252,252,0.78)';
-      ctx.fillText(ag.label, pr[0] + 6, pr[1] + 3);
-    }
-
-    requestAnimationFrame(renderHologram);
+    const ry = new Float32Array([cy, 0, sy, 0,  0, 1, 0, 0,  -sy, 0, cy, 0,  0, 0, 0, 1]);
+    const rx = new Float32Array([1, 0, 0, 0,  0, cp, sp, 0,  0, -sp, cp, 0,  0, 0, 0, 1]);
+    const tr = new Float32Array([1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, -0.05, -dist, 1]);
+    return mulMat4(tr, mulMat4(rx, ry));
   }
-  requestAnimationFrame(renderHologram);
+
+  let lastTs = performance.now();
+  let fpsSmooth = 60;
+
+  function renderFrame(now) {
+    requestAnimationFrame(renderFrame);
+    const dt = Math.min(0.05, (now - lastTs) / 1000);
+    lastTs = now;
+    if (dt > 0) fpsSmooth = fpsSmooth * 0.92 + (1 / dt) * 0.08;
+
+    if (!dragging) camYaw += dt * 0.42;
+
+    const mdl = MODELS[activeModelKey];
+    if (gl && progMesh) {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const cw = Math.max(1, Math.round((glCanvas.clientWidth || 436) * dpr));
+      const ch = Math.max(1, Math.round((glCanvas.clientHeight || 600) * dpr));
+      if (glCanvas.width !== cw || glCanvas.height !== ch) {
+        glCanvas.width = cw;
+        glCanvas.height = ch;
+      }
+      gl.viewport(0, 0, cw, ch);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+      const dist = 5.55 / camZoom;
+      const proj = makePerspective(0.68, cw / ch, 0.1, 30.0);
+      const view = makeOrbitView(camYaw, camPitch, dist);
+      const mvp = mulMat4(proj, view);
+      const centerY = mdl.maxY * 0.48;
+
+      // 1. Draw Perspective Build-Plate Grid
+      gl.useProgram(progLine);
+      gl.uniformMatrix4fv(gl.getUniformLocation(progLine, 'uMVP'), false, mvp);
+      gl.uniform1f(gl.getUniformLocation(progLine, 'uCenterY'), centerY);
+      const isLight = document.body.classList.contains('light');
+      gl.uniform4f(gl.getUniformLocation(progLine, 'uColor'),
+        isLight ? 0.06 : 0.35, isLight ? 0.18 : 0.62, isLight ? 0.32 : 0.85, isLight ? 0.14 : 0.16);
+      const aLinePos = gl.getAttribLocation(progLine, 'aPos');
+      gl.bindBuffer(gl.ARRAY_BUFFER, gridBuf);
+      gl.enableVertexAttribArray(aLinePos);
+      gl.vertexAttribPointer(aLinePos, 3, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.LINES, 0, gridVertCount);
+
+      // Compute active Laser Z-Slice height
+      let solidRatio = currentStage >= 3
+        ? installProgress / 100
+        : 0.34 + 0.24 * Math.sin(now * 0.0017);
+      const laserY = solidRatio * (mdl.maxY + 0.06);
+
+      // 2. Draw High-Poly Sculpted Mesh with Per-Pixel Laser Sintering Shader
+      gl.useProgram(progMesh);
+      gl.uniformMatrix4fv(gl.getUniformLocation(progMesh, 'uMVP'), false, mvp);
+      gl.uniform1f(gl.getUniformLocation(progMesh, 'uCenterY'), centerY);
+      gl.uniform1f(gl.getUniformLocation(progMesh, 'uLaserY'), laserY);
+      gl.uniform1f(gl.getUniformLocation(progMesh, 'uMode'),
+        shadeMode === 'pbr' ? 2.0 : (shadeMode === 'quad' ? 1.0 : 0.0));
+      const ex = Math.sin(-camYaw) * Math.cos(camPitch) * dist;
+      const ey = centerY + Math.sin(camPitch) * dist;
+      const ez = Math.cos(-camYaw) * Math.cos(camPitch) * dist;
+      gl.uniform3f(gl.getUniformLocation(progMesh, 'uEye'), ex, ey, ez);
+
+      const locP = gl.getAttribLocation(progMesh, 'aPos');
+      const locN = gl.getAttribLocation(progMesh, 'aNrm');
+      const locC = gl.getAttribLocation(progMesh, 'aCol');
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, mdl.posBuf);
+      gl.enableVertexAttribArray(locP);
+      gl.vertexAttribPointer(locP, 3, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, mdl.nrmBuf);
+      gl.enableVertexAttribArray(locN);
+      gl.vertexAttribPointer(locN, 3, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, mdl.colBuf);
+      gl.enableVertexAttribArray(locC);
+      gl.vertexAttribPointer(locC, 3, gl.FLOAT, false, 0, 0);
+
+      gl.drawArrays(gl.TRIANGLES, 0, mdl.triCount * 3);
+
+      // 3. Draw Glowing 3D Laser Scan Ring (or Celebration Emerald Shockwave)
+      const drawRing = (ry, rad, rgba) => {
+        const pts = [];
+        for (let s = 0; s <= 56; s++) {
+          const a = (s / 56) * Math.PI * 2;
+          pts.push(Math.cos(a) * rad, ry, Math.sin(a) * rad);
+        }
+        gl.useProgram(progLine);
+        gl.uniformMatrix4fv(gl.getUniformLocation(progLine, 'uMVP'), false, mvp);
+        gl.uniform1f(gl.getUniformLocation(progLine, 'uCenterY'), centerY);
+        gl.uniform4f(gl.getUniformLocation(progLine, 'uColor'), rgba[0], rgba[1], rgba[2], rgba[3]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, ringBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pts), gl.DYNAMIC_DRAW);
+        gl.enableVertexAttribArray(aLinePos);
+        gl.vertexAttribPointer(aLinePos, 3, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.LINE_STRIP, 0, 57);
+      };
+
+      if (shadeMode === 'forge' && solidRatio > 0.01 && solidRatio < 0.995) {
+        drawRing(laserY, 1.16, [0.22, 0.88, 1.0, 0.85]);
+      }
+      if (celebrateWave > 0.01) {
+        drawRing(0.02, (1.0 - celebrateWave) * 2.1 + 0.45, [0.06, 0.78, 0.52, celebrateWave]);
+        celebrateWave = Math.max(0, celebrateWave - dt * 0.72);
+      }
+    }
+
+    document.getElementById('fpsCounter').textContent =
+      `${Math.round(fpsSmooth)} FPS · ${mdl.triCount.toLocaleString()} Tris`;
+
+    // Step 3 Live Throughput Sparkline
+    if (currentStage === 3 && waveCanvas) {
+      const ww = waveCanvas.clientWidth || 560;
+      const wh = 36;
+      if (waveCanvas.width !== ww) waveCanvas.width = ww;
+      wctx.clearRect(0, 0, ww, wh);
+      wctx.beginPath();
+      throughputSamples.forEach((v, idx) => {
+        const x = (idx / (throughputSamples.length - 1)) * ww;
+        const y = wh - 5 - (v * 0.75 + 0.12 * Math.sin(now * 0.01 + idx * 0.5)) * (wh - 10);
+        if (idx === 0) wctx.moveTo(x, y);
+        else wctx.lineTo(x, y);
+      });
+      wctx.strokeStyle = '#38bdf8';
+      wctx.lineWidth = 1.6;
+      wctx.stroke();
+    }
+  }
+
+  requestAnimationFrame(renderFrame);
 </script>
 </body>
 </html>

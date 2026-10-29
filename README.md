@@ -58,6 +58,20 @@
 
 ---
 
+## Live 3D Laser-Sintering Setup Experience (`Setup.exe`)
+
+Falcon AI's Windows installer (`Falcon-AI-Setup-3.0.0-x64.exe`) features an embedded **60-FPS WebGL 3D Laser-Sintering & Quad-Lattice Forge** with drag-to-orbit 3D inspection (`GT Hypercar`, `Cyber Mecha`, `SIREN Bust`, `Valkyrie Starfighter`), `Laser` / `Quad` / `Solid` shading pills, Dark & Daylight themes, live hardware + local AI port scanning, modular engine plugin toggles, real-time Z-slice solidification synced to file extraction, and 1-click **Portable Mode** or **Workspace Launch**.
+
+| Step 1 — System & AI Readiness | Step 2 — Modular Customize |
+| :---: | :---: |
+| ![Setup Step 1](docs/20_v3_setup_step1_system_hypercar.png) | ![Setup Step 2](docs/21_v3_setup_step2_customize_mecha.png) |
+
+| Step 3 — Per-Pixel 3D Laser Sintering | Step 4 — Verified Launch (Daylight Theme) |
+| :---: | :---: |
+| ![Setup Step 3](docs/22_v3_setup_step3_live_laser_forge.png) | ![Setup Step 4 Daylight](docs/24_v3_setup_daylight_starfighter.png) |
+
+---
+
 ## Quick Download & Build From Source
 
 ### Option A — Windows x64 Standalone Desktop App (`Setup.exe`)
