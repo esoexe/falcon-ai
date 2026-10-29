@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" width="1200" height="340" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="340" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#110f0f"/>
+      <stop offset="55%" stop-color="#171414"/>
+      <stop offset="100%" stop-color="#100e0e"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="78%" cy="52%" r="42%">
+      <stop offset="0%" stop-color="#30d158" stop-opacity="0.16"/>
+      <stop offset="55%" stop-color="#38bdf8" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#110f0f" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#ffffff" stroke-opacity="0.035" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <!-- Canvas -->
+  <rect width="1200" height="340" rx="16" fill="url(#bg)"/>
+  <rect width="1200" height="340" rx="16" fill="url(#grid)"/>
+  <rect width="1200" height="340" rx="16" fill="url(#glow)"/>
+  <rect x="0.75" y="0.75" width="1198.5" height="338.5" rx="15.25" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1.5"/>
+
+  <!-- Left Content: OpenCode Identity & v2.1 Headline -->
+  <g transform="translate(64, 56)">
+    <!-- Logo Pill -->
+    <rect x="0" y="0" width="36" height="36" rx="8" fill="#f5f3f3"/>
+    <text x="18" y="25" text-anchor="middle" fill="#121010" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" font-weight="800">F</text>
+
+    <text x="50" y="26" fill="#f5f3f3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif" font-size="24" font-weight="700" letter-spacing="-0.4">Falcon AI</text>
+
+    <rect x="166" y="7" width="58" height="22" rx="6" fill="#231f1f" stroke="#30d158" stroke-opacity="0.55"/>
+    <text x="195" y="22" text-anchor="middle" fill="#30d158" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700">v2.1</text>
+
+    <!-- Main Headline -->
+    <text x="0" y="92" fill="#f5f3f3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif" font-size="38" font-weight="700" letter-spacing="-1">Open-Source 3D Model &amp; Game Studio.</text>
+    <text x="0" y="132" fill="#a6a0a0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif" font-size="21" font-weight="400">Minimal OpenCode UI · Pure C++20 Engine · Zero GPU Required</text>
+
+    <!-- Key Feature Pills -->
+    <g transform="translate(0, 166)" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">
+      <rect x="0" y="0" width="162" height="30" rx="6" fill="#1b1818" stroke="#ffffff" stroke-opacity="0.12"/>
+      <circle cx="15" cy="15" r="4" fill="#30d158"/>
+      <text x="27" y="19" fill="#e5e2e2">68 Free AI Providers</text>
+
+      <rect x="172" y="0" width="194" height="30" rx="6" fill="#1b1818" stroke="#ffffff" stroke-opacity="0.12"/>
+      <text x="186" y="19" fill="#e5e2e2">+ Custom /v1 &amp; Ollama</text>
+
+      <rect x="376" y="0" width="172" height="30" rx="6" fill="#1b1818" stroke="#ffffff" stroke-opacity="0.12"/>
+      <text x="390" y="19" fill="#e5e2e2">0 Python · 0 Docker</text>
+
+      <rect x="558" y="0" width="166" height="30" rx="6" fill="#1b1818" stroke="#ffffff" stroke-opacity="0.12"/>
+      <text x="572" y="19" fill="#e5e2e2">.GLB · .3MF · .STL · .HTML</text>
+    </g>
+
+    <!-- Prompt Preview Bar -->
+    <g transform="translate(0, 212)">
+      <rect x="0" y="0" width="620" height="44" rx="9" fill="#1b1818" stroke="#ffffff" stroke-opacity="0.18"/>
+      <rect x="10" y="9" width="54" height="26" rx="5" fill="#f5f3f3"/>
+      <text x="37" y="26" text-anchor="middle" fill="#121010" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" font-weight="700">Build</text>
+      <text x="78" y="27" fill="#d4cfcf" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12.5">Create a realistic 3D GT sports car with PBR carbon trim</text>
+      <rect x="552" y="9" width="58" height="26" rx="5" fill="#2b2626"/>
+      <text x="581" y="26" text-anchor="middle" fill="#f5f3f3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5">Send ↵</text>
+    </g>
+  </g>
+
+  <!-- Right Graphic: Isometric Sculpted Wireframe Mesh + Telemetry -->
+  <g transform="translate(955, 168)">
+    <!-- Ground Isometric Grid -->
+    <polygon points="0,95 165,30 0,-35 -165,30" fill="#181515" fill-opacity="0.65" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1"/>
+    <line x1="-82" y1="62" x2="82" y2="-2" stroke="#ffffff" stroke-opacity="0.07"/>
+    <line x1="-82" y1="-2" x2="82" y2="62" stroke="#ffffff" stroke-opacity="0.07"/>
+
+    <!-- Sculpted 3D Octa-Crystal / Vehicle Silhouette Wireframe -->
+    <polygon points="-112,22 -42,-36 56,-42 118,8 62,48 -48,54" fill="#30d158" fill-opacity="0.09" stroke="#30d158" stroke-width="1.6"/>
+    <polygon points="-42,-36 18,-68 78,-50 56,-42" fill="#38bdf8" fill-opacity="0.14" stroke="#38bdf8" stroke-width="1.4"/>
+    <polyline points="-112,22 -48,14 56,-42" stroke="#30d158" stroke-opacity="0.65" stroke-width="1.1"/>
+    <polyline points="-48,14 62,48" stroke="#30d158" stroke-opacity="0.55" stroke-width="1.1"/>
+    <polyline points="-48,14 -48,54" stroke="#30d158" stroke-opacity="0.55" stroke-width="1.1"/>
+    <circle cx="-56" cy="46" r="18" fill="#141212" stroke="#f5f3f3" stroke-opacity="0.7" stroke-width="2"/>
+    <circle cx="58" cy="36" r="18" fill="#141212" stroke="#f5f3f3" stroke-opacity="0.7" stroke-width="2"/>
+
+    <!-- Laser Scan Ring -->
+    <ellipse cx="4" cy="4" rx="136" ry="44" stroke="#30d158" stroke-opacity="0.35" stroke-dasharray="5 5" stroke-width="1.2"/>
+
+    <!-- Telemetry Tag -->
+    <g transform="translate(-118, -108)">
+      <rect x="0" y="0" width="236" height="28" rx="6" fill="#1b1818" stroke="#ffffff" stroke-opacity="0.14"/>
+      <circle cx="14" cy="14" r="3.5" fill="#30d158"/>
+      <text x="26" y="18" fill="#d6d1d1" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11">100,936 tris · Watertight · PBR</text>
+    </g>
+  </g>
+</svg>

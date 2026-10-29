@@ -800,6 +800,7 @@ export default function App() {
             <div className="oc-logo">
               <span className="oc-logo-mark">F</span>
               <span>Falcon</span>
+              <span className="oc-kbd" style={{ fontSize: 10 }}>v2.1</span>
             </div>
             <button
               className="oc-icon-btn oc-no-drag"

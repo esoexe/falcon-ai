@@ -343,15 +343,16 @@ int main(int argc, char** argv) {
             return HttpResponse::bytes(read_binary_file(setup_html), "text/html; charset=utf-8");
         }
         if (segs.size() == 2 && segs[0] == "download" && (segs[1] == "falcon.exe" || segs[1] == "setup.exe")) {
-            fs::path exe_p = base_dir / "releases" / "Falcon-AI-Setup-2.0.0-x64.exe";
-            if (!fs::exists(exe_p)) exe_p = base_dir / "releases" / "Falcon-AI-2.0.0-x64.exe";
+            fs::path exe_p = base_dir / "releases" / "Falcon-AI-Setup-2.1.0-x64.exe";
+            if (!fs::exists(exe_p)) exe_p = base_dir / "releases" / "Falcon-AI-Setup-2.0.0-x64.exe";
             if (!fs::exists(exe_p)) return HttpResponse::json("{\"error\":\"Setup.exe not found\"}", 404);
             return HttpResponse::bytes(read_binary_file(exe_p), "application/vnd.microsoft.portable-executable", exe_p.filename().string());
         }
         if (segs.size() == 2 && segs[0] == "download" && segs[1] == "source.zip") {
-            fs::path zip_p = base_dir / "releases" / "Falcon-AI-2.0.0-Source-Code.zip";
+            fs::path zip_p = base_dir / "releases" / "Falcon-AI-2.1.0-Source-Code.zip";
+            if (!fs::exists(zip_p)) zip_p = base_dir / "releases" / "Falcon-AI-2.0.0-Source-Code.zip";
             if (!fs::exists(zip_p)) return HttpResponse::json("{\"error\":\"Source archive not found\"}", 404);
-            return HttpResponse::bytes(read_binary_file(zip_p), "application/zip", "Falcon-AI-2.0.0-Source-Code.zip");
+            return HttpResponse::bytes(read_binary_file(zip_p), "application/zip", zip_p.filename().string());
         }
 
         if (segs.size() == 2 && segs[0] == "exports") {

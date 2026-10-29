@@ -42,7 +42,7 @@ async function createWindowsShortcutsAndRegistry(targetDir, exePath) {
   const uninstallCmdPath = path.join(targetDir, 'Uninstall Falcon AI.cmd');
   const uninstallCmd = [
     '@echo off',
-    'title Uninstall Falcon AI v2.0',
+    'title Uninstall Falcon AI v2.1',
     'reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\FalconAI" /f >nul 2>&1',
     'del "%USERPROFILE%\\Desktop\\Falcon AI.lnk" >nul 2>&1',
     'rmdir /s /q "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Falcon AI" >nul 2>&1',
@@ -60,7 +60,7 @@ async function createWindowsShortcutsAndRegistry(targetDir, exePath) {
     $s1.TargetPath = '${esc(exePath)}'
     $s1.Arguments = '--studio'
     $s1.WorkingDirectory = '${esc(targetDir)}'
-    $s1.Description = 'Falcon AI v2.0 — 3D Model Swarm & Playable 3D Game Studio'
+    $s1.Description = 'Falcon AI v2.1 — OpenCode 3D Model Swarm & Playable 3D Game Studio'
     $s1.Save()
 
     $smDir = Join-Path ([Environment]::GetFolderPath('Programs')) 'Falcon AI'
@@ -73,8 +73,8 @@ async function createWindowsShortcutsAndRegistry(targetDir, exePath) {
 
     $rk = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\FalconAI'
     New-Item -Path $rk -Force | Out-Null
-    Set-ItemProperty -Path $rk -Name 'DisplayName' -Value 'Falcon AI Studio v2.0'
-    Set-ItemProperty -Path $rk -Name 'DisplayVersion' -Value '2.0.0'
+    Set-ItemProperty -Path $rk -Name 'DisplayName' -Value 'Falcon AI Studio v2.1'
+    Set-ItemProperty -Path $rk -Name 'DisplayVersion' -Value '2.1.0'
     Set-ItemProperty -Path $rk -Name 'Publisher' -Value 'Falcon AI Open Source'
     Set-ItemProperty -Path $rk -Name 'InstallLocation' -Value '${esc(targetDir)}'
     Set-ItemProperty -Path $rk -Name 'DisplayIcon' -Value '${esc(exePath)}'
@@ -186,7 +186,7 @@ async function performLiveInstallation({ opts, userDataDir, starterDir, emit }) 
 
   // Mark installation complete so direct launches open Studio immediately
   const receipt = {
-    version: '2.0.0',
+    version: '2.1.0',
     installedAt: new Date().toISOString(),
     installedPath: targetDir,
     executable: installedExePath,
@@ -198,7 +198,7 @@ async function performLiveInstallation({ opts, userDataDir, starterDir, emit }) 
   emit({
     percent: 100,
     tag: 'READY',
-    task: 'Falcon AI v2.0 installation complete & verified!',
+    task: 'Falcon AI v2.1 installation complete & verified!',
     speedMbps: 180,
     log: 'All C++20 3D engines, 68 free AI providers & playable 3D games verified.',
     ok: true,
