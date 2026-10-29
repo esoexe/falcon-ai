@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-export default function CommandPalette({ open, onClose, commands = [] }) {
+export default function CommandPalette({ open, onClose, commands }) {
   const [query, setQuery] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef(null);
@@ -13,134 +13,80 @@ export default function CommandPalette({ open, onClose, commands = [] }) {
     }
   }, [open]);
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return commands;
+    return commands.filter(
+      (c) =>
+        c.label.toLowerCase().includes(q) ||
+        (c.category || '').toLowerCase().includes(q) ||
+        (c.shortcut || '').toLowerCase().includes(q)
+    );
+  }, [commands, query]);
+
   if (!open) return null;
 
-  const q = query.trim().toLowerCase();
-  const filtered = commands.filter(
-    (c) =>
-      !q ||
-      c.label.toLowerCase().includes(q) ||
-      (c.category && c.category.toLowerCase().includes(q)) ||
-      (c.hint && c.hint.toLowerCase().includes(q))
-  );
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      onClose();
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedIdx((i) => (filtered.length ? (i + 1) % filtered.length : 0));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedIdx((i) => (filtered.length ? (i - 1 + filtered.length) % filtered.length : 0));
-    } else if (e.key === 'Enter' && filtered[selectedIdx]) {
-      e.preventDefault();
-      const action = filtered[selectedIdx].action;
-      onClose();
-      action();
-    }
+  const runSelected = (item) => {
+    if (!item) return;
+    onClose();
+    item.action?.();
   };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
         className="modal-card"
-        style={{ width: 'min(580px, 92vw)' }}
+        style={{ width: 'min(560px, 92vw)', display: 'flex', flexDirection: 'column' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '10px 12px',
-            borderBottom: '1px solid var(--hairline-strong)',
-            background: 'var(--bg-surface)',
-          }}
-        >
-          <span style={{ color: 'var(--ink-muted)', fontWeight: 700 }}>&gt;</span>
+        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--hairline)' }}>
           <input
             ref={inputRef}
+            className="oc-composer-input"
+            placeholder="Type a command or search settings, providers, exports..."
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
               setSelectedIdx(0);
             }}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a command or search actions... (esc to close)"
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: 'var(--ink-primary)',
-              fontSize: 12.5,
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') onClose();
+              else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSelectedIdx((i) => (filtered.length ? (i + 1) % filtered.length : 0));
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setSelectedIdx((i) => (filtered.length ? (i - 1 + filtered.length) % filtered.length : 0));
+              } else if (e.key === 'Enter' && filtered[selectedIdx]) {
+                e.preventDefault();
+                runSelected(filtered[selectedIdx]);
+              }
             }}
           />
-          <span className="oc-kbd">ESC</span>
         </div>
 
-        <div style={{ maxHeight: '54vh', overflowY: 'auto' }}>
+        <div style={{ maxHeight: 340, overflowY: 'auto', padding: 6 }}>
           {filtered.length === 0 ? (
-            <div style={{ padding: 16, color: 'var(--ink-muted)', fontSize: 11.5 }}>
-              [!] no matching falcon commands for "{query}"
+            <div style={{ padding: 14, color: 'var(--ink-muted)', fontSize: 12, textAlign: 'center' }}>
+              No matching commands
             </div>
           ) : (
-            filtered.map((cmd, idx) => {
-              const active = idx === selectedIdx;
-              return (
-                <button
-                  key={cmd.id}
-                  onMouseEnter={() => setSelectedIdx(idx)}
-                  onClick={() => {
-                    onClose();
-                    cmd.action();
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    padding: '8px 12px',
-                    background: active ? 'var(--bg-elevated)' : 'transparent',
-                    border: 'none',
-                    borderBottom: '1px solid var(--hairline)',
-                    color: active ? 'var(--ink-primary)' : 'var(--ink-secondary)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    fontSize: 11.5,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ color: active ? 'var(--ink-primary)' : 'var(--ink-muted)', width: 22 }}>
-                      {active ? '[>]' : '[ ]'}
-                    </span>
-                    <span style={{ color: 'var(--ink-muted)', fontSize: 10.5 }}>
-                      {cmd.category} /
-                    </span>
-                    <strong style={{ fontWeight: active ? 600 : 400 }}>{cmd.label}</strong>
-                  </div>
-                  {cmd.shortcut && <span className="oc-kbd">{cmd.shortcut}</span>}
-                </button>
-              );
-            })
+            filtered.map((cmd, idx) => (
+              <button
+                key={cmd.id}
+                className={`oc-slash-item ${idx === selectedIdx ? 'selected' : ''}`}
+                style={{ width: '100%', padding: '8px 10px' }}
+                onMouseEnter={() => setSelectedIdx(idx)}
+                onClick={() => runSelected(cmd)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11, color: 'var(--ink-muted)', minWidth: 54 }}>{cmd.category}</span>
+                  <span>{cmd.label}</span>
+                </div>
+                {cmd.shortcut && <span className="oc-kbd">{cmd.shortcut}</span>}
+              </button>
+            ))
           )}
-        </div>
-
-        <div
-          style={{
-            padding: '6px 12px',
-            borderTop: '1px solid var(--hairline)',
-            background: 'var(--bg-void)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontSize: 10.5,
-            color: 'var(--ink-muted)',
-          }}
-        >
-          <span>[↑/↓] navigate · [enter] execute</span>
-          <span>falcon command palette</span>
         </div>
       </div>
     </div>

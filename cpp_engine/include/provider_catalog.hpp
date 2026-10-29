@@ -11,6 +11,7 @@
 
 #include "json.hpp"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -301,6 +302,15 @@ struct UserProviderState {
     std::string custom_model;
 };
 
+struct CustomProviderEntry {
+    std::string id;
+    std::string name;
+    std::string base_url;
+    std::string api_key;
+    std::string model;
+    bool enabled = true;
+};
+
 class ProviderPoolManager {
 public:
     explicit ProviderPoolManager(const std::filesystem::path& save_path = "workspace_providers.json")
@@ -318,6 +328,32 @@ public:
         JsonValue arr = JsonValue::array();
         int cnt_no_key = 0, cnt_free_key = 0, cnt_local = 0, cnt_paid = 0;
         int active_providers = 0, active_models = 0;
+
+        for (const auto& cp : custom_providers_) {
+            bool ready = cp.enabled && !cp.base_url.empty();
+            if (ready) {
+                ++active_providers;
+                ++active_models;
+            }
+            JsonValue item = JsonValue::object();
+            item["id"] = cp.id;
+            item["name"] = cp.name;
+            item["group"] = "custom";
+            item["limit_notes"] = "Custom OpenAI-compatible provider";
+            item["site"] = "custom";
+            item["base_url"] = cp.base_url;
+            item["model"] = cp.model;
+            item["free_models_est"] = 1;
+            item["is_bonus"] = false;
+            item["is_custom"] = true;
+            item["enabled"] = cp.enabled;
+            item["has_key"] = !cp.api_key.empty();
+            item["key_preview"] = cp.api_key.empty()
+                ? ""
+                : (cp.api_key.size() > 8 ? cp.api_key.substr(0, 4) + "..." + cp.api_key.substr(cp.api_key.size() - 3) : "****");
+            item["ready_in_team"] = ready;
+            arr.push_back(item);
+        }
 
         for (const auto& s : get_all_provider_specs()) {
             std::string grp(s.group);
@@ -361,6 +397,7 @@ public:
 
         JsonValue out = JsonValue::object();
         out["counts"] = JsonValue::object({
+            {"custom", static_cast<int>(custom_providers_.size())},
             {"no_key", cnt_no_key},
             {"free_key", cnt_free_key},
             {"local", cnt_local},
@@ -375,8 +412,47 @@ public:
 
     void update_provider(const JsonValue& body) {
         std::lock_guard<std::mutex> lk(mtx_);
+        std::string action = body.get_str("action", "");
+        if (action == "add_custom") {
+            CustomProviderEntry cp;
+            cp.id = "custom_" + std::to_string(custom_providers_.size() + 1) + "_" + std::to_string(std::hash<std::string>{}(body.get_str("name", "p") + body.get_str("base_url", "")) & 0xFFFF);
+            cp.name = body.get_str("name", "Custom AI Provider");
+            cp.base_url = body.get_str("base_url", "http://127.0.0.1:1234/v1");
+            while (!cp.base_url.empty() && cp.base_url.back() == '/') cp.base_url.pop_back();
+            cp.api_key = body.get_str("api_key", "");
+            cp.model = body.get_str("model", "default");
+            cp.enabled = true;
+            custom_providers_.insert(custom_providers_.begin(), cp);
+            save_to_disk_unlocked();
+            return;
+        }
+        if (action == "delete_custom") {
+            std::string did = body.get_str("id", "");
+            custom_providers_.erase(
+                std::remove_if(custom_providers_.begin(), custom_providers_.end(), [&](const CustomProviderEntry& c) { return c.id == did; }),
+                custom_providers_.end()
+            );
+            save_to_disk_unlocked();
+            return;
+        }
+
         std::string pid = body.get_str("id");
         if (pid.empty()) return;
+
+        for (auto& cp : custom_providers_) {
+            if (cp.id == pid) {
+                if (body.has("enabled")) cp.enabled = body.get_bool("enabled", cp.enabled);
+                if (body.has("base_url")) cp.base_url = body.get_str("base_url", cp.base_url);
+                if (body.has("model")) cp.model = body.get_str("model", cp.model);
+                if (body.has("api_key")) {
+                    std::string k = body.get_str("api_key");
+                    cp.api_key = (k == "__CLEAR__") ? "" : k;
+                }
+                save_to_disk_unlocked();
+                return;
+            }
+        }
+
         auto& st = states_[pid];
         if (body.has("api_key")) {
             std::string k = body.get_str("api_key");
@@ -385,7 +461,7 @@ public:
                 st.enabled = false;
             } else if (!k.empty()) {
                 st.api_key = k;
-                st.enabled = true; // Adding a key automatically adds its free models to the team!
+                st.enabled = true;
             }
         }
         if (body.has("enabled")) {
@@ -408,6 +484,12 @@ public:
     std::vector<EndpointCandidate> get_failover_candidates(bool include_no_key_cloud = false) const {
         std::lock_guard<std::mutex> lk(mtx_);
         std::vector<EndpointCandidate> out;
+
+        // Priority 0: User-added Custom Providers
+        for (const auto& cp : custom_providers_) {
+            if (!cp.enabled || cp.base_url.empty()) continue;
+            out.push_back({cp.id, cp.name, cp.base_url, cp.api_key, cp.model});
+        }
 
         // Priority 1: User-configured Free-Key & Opted-In Paid keys (explicitly added by user)
         for (const auto& s : get_all_provider_specs()) {
@@ -449,6 +531,21 @@ private:
             ss << f.rdbuf();
             JsonValue j = JsonValue::parse(ss.str());
             if (!j.is_object()) return;
+            if (j.has("__custom_providers") && j["__custom_providers"].is_array()) {
+                custom_providers_.clear();
+                const auto& carr = j["__custom_providers"];
+                for (size_t i = 0; i < carr.size(); ++i) {
+                    const auto& c = carr[i];
+                    CustomProviderEntry cp;
+                    cp.id = c.get_str("id", "");
+                    cp.name = c.get_str("name", "Custom Provider");
+                    cp.base_url = c.get_str("base_url", "");
+                    cp.api_key = c.get_str("api_key", "");
+                    cp.model = c.get_str("model", "default");
+                    cp.enabled = c.get_bool("enabled", true);
+                    if (!cp.id.empty() && !cp.base_url.empty()) custom_providers_.push_back(cp);
+                }
+            }
             for (const auto& s : get_all_provider_specs()) {
                 if (!j.has(s.id)) continue;
                 const auto& item = j[s.id];
@@ -464,6 +561,18 @@ private:
     void save_to_disk_unlocked() const {
         try {
             JsonValue j = JsonValue::object();
+            JsonValue carr = JsonValue::array();
+            for (const auto& cp : custom_providers_) {
+                carr.push_back(JsonValue::object({
+                    {"id", cp.id},
+                    {"name", cp.name},
+                    {"base_url", cp.base_url},
+                    {"api_key", cp.api_key},
+                    {"model", cp.model},
+                    {"enabled", cp.enabled}
+                }));
+            }
+            j["__custom_providers"] = carr;
             for (const auto& kv : states_) {
                 JsonValue item = JsonValue::object();
                 item["enabled"] = kv.second.enabled;
@@ -480,6 +589,7 @@ private:
     mutable std::mutex mtx_;
     std::filesystem::path save_path_;
     std::map<std::string, UserProviderState> states_;
+    std::vector<CustomProviderEntry> custom_providers_;
 };
 
 } // namespace openmesh

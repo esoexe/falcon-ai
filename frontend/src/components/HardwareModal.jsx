@@ -1,75 +1,89 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+
+const POPULAR_IDS = [
+  'openrouter',
+  'groq',
+  'gemini_studio',
+  'github_models',
+  'mistral_plateforme',
+  'deepseek',
+  'cerebras',
+  'nvidia_nim',
+];
 
 export default function HardwareModal({
   open,
   onClose,
   hardware,
-  routerConfig,
-  onRescan,
+  routerCfg,
   onSaveRouter,
+  onRescan,
+  gridRes,
+  setGridRes,
+  theme,
+  onToggleTheme,
+  initialSection = 'connect',
 }) {
-  const [activeTab, setActiveTab] = useState('no_key');
-  const [catalog, setCatalog] = useState(null);
+  const [section, setSection] = useState(initialSection);
+  const [cfg, setCfg] = useState(
+    routerCfg || {
+      provider: 'auto',
+      ollama_url: 'http://127.0.0.1:11434',
+      ollama_model: 'llama3.2',
+      openai_base_url: 'http://127.0.0.1:1234/v1',
+      openai_api_key: '',
+      openai_model: 'qwen2.5-coder',
+    }
+  );
+
+  // Provider catalog state
+  const [catalog, setCatalog] = useState({ counts: {}, providers: [] });
+  const [freeFilter, setFreeFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [keyDrafts, setKeyDrafts] = useState({});
-  const [savingId, setSavingId] = useState('');
-  const [cfg, setCfg] = useState({
-    provider: 'auto',
-    ollama_url: 'http://127.0.0.1:11434',
-    ollama_model: '',
-    openai_base_url: 'http://127.0.0.1:1234/v1',
-    openai_api_key: '',
-    openai_model: '',
+  const [modelDrafts, setModelDrafts] = useState({});
+  const [urlDrafts, setUrlDrafts] = useState({});
+  const [busyId, setBusyId] = useState('');
+  const [toast, setToast] = useState('');
+
+  // Add Custom Provider form state
+  const [customForm, setCustomForm] = useState({
+    name: '',
+    base_url: 'https://api.openai.com/v1',
+    api_key: '',
+    model: 'gpt-4o-mini',
   });
-  const [rescanning, setRescanning] = useState(false);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2600);
+  };
+
+  const fetchProviders = async () => {
+    try {
+      const r = await fetch('/api/providers');
+      if (r.ok) {
+        const d = await r.json();
+        setCatalog(d);
+      }
+    } catch {
+      /* ignore */
+    }
+  };
 
   useEffect(() => {
-    if (routerConfig) setCfg((prev) => ({ ...prev, ...routerConfig }));
-  }, [routerConfig]);
+    if (routerCfg) setCfg(routerCfg);
+  }, [routerCfg]);
 
   useEffect(() => {
-    if (!open) return;
-    fetch('/api/providers')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d) setCatalog(d);
-      })
-      .catch(() => {});
-  }, [open]);
+    if (open) {
+      setSection(initialSection || 'connect');
+      fetchProviders();
+    }
+  }, [open, initialSection]);
 
-  if (!open) return null;
-
-  const profile = hardware?.profile || {};
-  const cpu = hardware?.cpu || {};
-  const mem = hardware?.memory || {};
-  const gpus = hardware?.gpus || [];
-  const services = hardware?.services || {};
-  const models = hardware?.models || [];
-
-  const counts = catalog?.counts || {
-    no_key: 5,
-    free_key: 52,
-    local: 11,
-    total_free: 68,
-    paid_opt_in: 30,
-    active_in_swarm: 7,
-    available_team_models: 39,
-  };
-  const allProviders = catalog?.providers || [];
-
-  const handleRescan = async () => {
-    setRescanning(true);
-    await onRescan();
-    setRescanning(false);
-  };
-
-  const handleSaveRouter = async () => {
-    await onSaveRouter(cfg);
-    onClose();
-  };
-
-  const updateProvider = async (payload) => {
-    setSavingId(payload.id);
+  const updateProvider = async (payload, successMsg) => {
+    setBusyId(payload.id || payload.action || 'save');
     try {
       const r = await fetch('/api/providers', {
         method: 'POST',
@@ -79,355 +93,622 @@ export default function HardwareModal({
       if (r.ok) {
         const d = await r.json();
         setCatalog(d);
+        if (payload.id) {
+          setKeyDrafts((prev) => ({ ...prev, [payload.id]: '' }));
+        }
+        if (successMsg) showToast(successMsg);
       }
     } catch {
-      // ignore offline
+      /* ignore */
+    } finally {
+      setBusyId('');
     }
-    setSavingId('');
   };
 
-  const filteredProviders = allProviders.filter((p) => {
-    if (p.group !== activeTab) return false;
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      p.name.toLowerCase().includes(q) ||
-      p.site.toLowerCase().includes(q) ||
-      p.limit_notes.toLowerCase().includes(q) ||
-      p.model.toLowerCase().includes(q)
+  const handleAddCustomProvider = async (e) => {
+    e.preventDefault();
+    if (!customForm.base_url.trim()) return;
+    const name = customForm.name.trim() || 'Custom OpenAI Endpoint';
+    await updateProvider(
+      {
+        action: 'add_custom',
+        name,
+        base_url: customForm.base_url.trim(),
+        api_key: customForm.api_key.trim(),
+        model: customForm.model.trim() || 'default',
+      },
+      `Connected ${name}`
     );
-  });
+    // Also sync direct OpenAI-compatible router fields for convenience
+    const nextCfg = {
+      ...cfg,
+      openai_base_url: customForm.base_url.trim(),
+      openai_api_key: customForm.api_key.trim() || cfg.openai_api_key,
+      openai_model: customForm.model.trim() || cfg.openai_model,
+    };
+    setCfg(nextCfg);
+    onSaveRouter?.(nextCfg);
+    setCustomForm({ name: '', base_url: '', api_key: '', model: '' });
+  };
 
-  const serviceStatus = (ok) => (
-    <span style={{ color: ok ? 'var(--sig-green)' : 'var(--ink-muted)', fontWeight: 600 }}>
-      {ok ? '[on]' : '[--]'}
-    </span>
+  const customProviders = useMemo(
+    () => (catalog.providers || []).filter((p) => p.group === 'custom'),
+    [catalog.providers]
   );
+
+  const popularProviders = useMemo(() => {
+    const byId = new Map((catalog.providers || []).map((p) => [p.id, p]));
+    return POPULAR_IDS.map((id) => byId.get(id)).filter(Boolean);
+  }, [catalog.providers]);
+
+  const filteredFree = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (catalog.providers || []).filter((p) => {
+      if (p.group === 'paid' || p.group === 'local' || p.group === 'custom') return false;
+      if (freeFilter !== 'all' && p.group !== freeFilter) return false;
+      if (!q) return true;
+      return (
+        p.name.toLowerCase().includes(q) ||
+        p.model.toLowerCase().includes(q) ||
+        p.limit_notes.toLowerCase().includes(q)
+      );
+    });
+  }, [catalog.providers, freeFilter, search]);
+
+  const localCatalog = useMemo(
+    () => (catalog.providers || []).filter((p) => p.group === 'local'),
+    [catalog.providers]
+  );
+
+  const paidProviders = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (catalog.providers || []).filter((p) => {
+      if (p.group !== 'paid') return false;
+      if (!q) return true;
+      return p.name.toLowerCase().includes(q) || p.model.toLowerCase().includes(q);
+    });
+  }, [catalog.providers, search]);
+
+  if (!open) return null;
+
+  const hw = hardware || {};
+  const counts = catalog.counts || {};
+  const localRouters = hw.local_llm_routers || [];
+
+  const renderProviderRow = (p) => {
+    const draftKey = keyDrafts[p.id] ?? '';
+    const draftModel = modelDrafts[p.id] ?? p.model;
+    const draftUrl = urlDrafts[p.id] ?? p.base_url;
+    const needsKey = p.group === 'free_key' || p.group === 'paid';
+
+    return (
+      <div
+        key={p.id}
+        className="oc-card"
+        style={{
+          borderColor: p.ready_in_team ? 'rgba(48, 209, 88, 0.36)' : 'var(--hairline)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</span>
+              {p.ready_in_team && (
+                <span
+                  style={{
+                    fontSize: 10.5,
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--sig-green)',
+                    padding: '1px 6px',
+                    borderRadius: 4,
+                    background: 'rgba(48, 209, 88, 0.12)',
+                  }}
+                >
+                  Connected
+                </span>
+              )}
+              {p.group === 'no_key' && (
+                <span className="oc-kbd" style={{ color: 'var(--ink-secondary)' }}>
+                  No key needed
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--ink-muted)', marginTop: 2 }}>
+              {p.limit_notes} {p.site && p.site !== 'custom' ? `· ${p.site}` : ''}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {p.is_custom && (
+              <button
+                className="oc-btn oc-btn-sm"
+                style={{ color: 'var(--sig-red)' }}
+                onClick={() => updateProvider({ action: 'delete_custom', id: p.id }, 'Removed custom provider')}
+              >
+                Delete
+              </button>
+            )}
+            <button
+              className={`oc-btn oc-btn-sm ${p.enabled ? 'oc-btn-primary' : ''}`}
+              disabled={busyId === p.id}
+              onClick={() =>
+                updateProvider(
+                  { id: p.id, enabled: !p.enabled },
+                  !p.enabled ? `Enabled ${p.name}` : `Disabled ${p.name}`
+                )
+              }
+            >
+              {p.enabled ? 'Enabled' : 'Enable'}
+            </button>
+          </div>
+        </div>
+
+        {/* Inline API Key + Model configuration */}
+        <div style={{ display: 'grid', gridTemplateColumns: needsKey || p.is_custom ? '1.3fr 1fr auto' : '1fr auto', gap: 6 }}>
+          {(needsKey || p.is_custom) && (
+            <input
+              type="password"
+              className="text-input"
+              placeholder={
+                p.has_key ? `Saved key (${p.key_preview}) — paste new to replace` : 'Paste API key (sk-...)'
+              }
+              value={draftKey}
+              onChange={(e) => setKeyDrafts((prev) => ({ ...prev, [p.id]: e.target.value }))}
+            />
+          )}
+          <input
+            className="text-input"
+            style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5 }}
+            placeholder="Model ID"
+            value={draftModel}
+            onChange={(e) => setModelDrafts((prev) => ({ ...prev, [p.id]: e.target.value }))}
+          />
+          <div style={{ display: 'flex', gap: 5 }}>
+            <button
+              className="oc-btn"
+              disabled={busyId === p.id}
+              onClick={() =>
+                updateProvider(
+                  {
+                    id: p.id,
+                    ...(draftKey.trim() ? { api_key: draftKey.trim(), enabled: true } : {}),
+                    model: draftModel.trim() || p.model,
+                    ...(p.is_custom ? { base_url: draftUrl.trim() || p.base_url } : {}),
+                  },
+                  `Saved ${p.name}`
+                )
+              }
+            >
+              {p.has_key && !draftKey.trim() ? 'Save' : 'Connect'}
+            </button>
+            {p.has_key && (
+              <button
+                className="oc-btn"
+                title="Clear saved API key"
+                onClick={() => updateProvider({ id: p.id, api_key: '__CLEAR__' }, `Cleared key for ${p.name}`)}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal-card"
-        style={{ width: 'min(920px, 95vw)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          style={{
-            padding: '10px 14px',
-            borderBottom: '1px solid var(--hairline-strong)',
-            background: 'var(--bg-void)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 10,
-          }}
-        >
-          <div>
-            <strong>settings &rarr; providers &amp; hardware // {counts.total_free} free + {counts.paid_opt_in} opt-in ai providers</strong>
-            <div style={{ fontSize: 10.5, color: 'var(--ink-muted)' }}>
-              [{counts.active_in_swarm} active providers &middot; ~{counts.available_team_models} models in 6-agent swarm team] &middot; paid providers off by default
-            </div>
+      <div className="modal-card oc-settings-shell" onClick={(e) => e.stopPropagation()}>
+        {/* Top Modal Header */}
+        <div className="oc-settings-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>Settings & Providers</span>
+            <span className="oc-kbd">{counts.active_in_swarm ?? 16} active</span>
+            {toast && (
+              <span style={{ fontSize: 11.5, color: 'var(--sig-green)', fontFamily: 'var(--font-mono)' }}>
+                {toast}
+              </span>
+            )}
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button className="oc-btn oc-btn-sm" onClick={handleRescan} disabled={rescanning}>
-              {rescanning ? '[scanning...]' : '[rescan]'}
-            </button>
-            <button className="oc-btn oc-btn-sm" onClick={onClose}>
-              [esc]
-            </button>
-          </div>
+          <button className="oc-icon-btn" onClick={onClose}>
+            Done <span className="oc-kbd">Esc</span>
+          </button>
         </div>
 
-        {/* Summary Counters + Category Tabs */}
-        <div
-          style={{
-            padding: '8px 14px',
-            borderBottom: '1px solid var(--hairline)',
-            background: 'var(--bg-surface)',
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {[
-              { id: 'no_key', label: `[1] no-key instant (${counts.no_key})` },
-              { id: 'free_key', label: `[2] free-key tier (${counts.free_key})` },
-              { id: 'local', label: `[3] local computer (${counts.local})` },
-              { id: 'paid', label: `[4] paid opt-in (${counts.paid_opt_in})` },
-              { id: 'hardware', label: '[5] hardware & 3d' },
-            ].map((t) => (
-              <button
-                key={t.id}
-                className={`oc-btn oc-btn-sm ${activeTab === t.id ? 'oc-btn-primary' : ''}`}
-                onClick={() => setActiveTab(t.id)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+        {/* 2-Column OpenCode Settings Body */}
+        <div className="oc-settings-body">
+          {/* Left Navigation */}
+          <nav className="oc-settings-nav">
+            <button
+              className={`oc-settings-nav-item ${section === 'connect' ? 'active' : ''}`}
+              onClick={() => setSection('connect')}
+            >
+              <span>Add & Connect</span>
+              <span className="oc-kbd">+</span>
+            </button>
+            <button
+              className={`oc-settings-nav-item ${section === 'free' ? 'active' : ''}`}
+              onClick={() => setSection('free')}
+            >
+              <span>Free Providers</span>
+              <span className="oc-kbd">{(counts.no_key ?? 5) + (counts.free_key ?? 52)}</span>
+            </button>
+            <button
+              className={`oc-settings-nav-item ${section === 'local' ? 'active' : ''}`}
+              onClick={() => setSection('local')}
+            >
+              <span>Local Models</span>
+              <span className="oc-kbd">{counts.local ?? 11}</span>
+            </button>
+            <button
+              className={`oc-settings-nav-item ${section === 'paid' ? 'active' : ''}`}
+              onClick={() => setSection('paid')}
+            >
+              <span>Paid Providers</span>
+              <span className="oc-kbd">{counts.paid_opt_in ?? 30}</span>
+            </button>
+            <div style={{ height: 1, background: 'var(--hairline)', margin: '6px 4px' }} />
+            <button
+              className={`oc-settings-nav-item ${section === 'hardware' ? 'active' : ''}`}
+              onClick={() => setSection('hardware')}
+            >
+              <span>Hardware & Studio</span>
+            </button>
+          </nav>
 
-          {activeTab !== 'hardware' && (
-            <input
-              className="text-input"
-              style={{ width: 220, padding: '4px 8px', fontSize: 11 }}
-              placeholder="filter providers or models..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          )}
-        </div>
-
-        {/* Body */}
-        <div style={{ padding: 14, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-          {activeTab !== 'hardware' ? (
-            <>
-              {/* Group Banner */}
-              <div
-                style={{
-                  padding: '8px 11px',
-                  border: '1px solid var(--hairline-strong)',
-                  borderRadius: 4,
-                  background: 'var(--bg-void)',
-                  fontSize: 11,
-                  color: 'var(--ink-secondary)',
-                }}
-              >
-                {activeTab === 'no_key' && (
-                  <>
-                    <strong style={{ color: 'var(--sig-green)' }}>[+] work with no key &amp; no account:</strong>{' '}
-                    Instant-on right out of a fresh install (~30 free models ready immediately across OVHcloud, Kilo Gateway, LLM7, and Pollinations).
-                  </>
-                )}
-                {activeTab === 'free_key' && (
-                  <>
-                    <strong style={{ color: 'var(--sig-green)' }}>[+] free tier with a free key ({counts.free_key} providers):</strong>{' '}
-                    Sign up for a free key on any provider below and paste it here — each key automatically adds its free models to the 6-Agent Swarm.
-                  </>
-                )}
-                {activeTab === 'local' && (
-                  <>
-                    <strong style={{ color: 'var(--sig-green)' }}>[+] local on your own computer ({counts.local} engines):</strong>{' '}
-                    100% free &amp; unlimited — runs on your own RAM/CPU/GPU with zero cloud limits (includes Falcon Built-in C++20 Zero-GPU Engine).
-                  </>
-                )}
-                {activeTab === 'paid' && (
-                  <>
-                    <strong style={{ color: 'var(--sig-amber, #f59e0b)' }}>[!] paid providers (30 &middot; off by default):</strong>{' '}
-                    Disabled by default so Falcon AI never spends money unless you explicitly opt in and add a key per provider.
-                  </>
-                )}
-              </div>
-
-              {/* Providers List */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {filteredProviders.map((p, idx) => {
-                  const needsKey = p.group === 'free_key' || p.group === 'paid';
-                  const draft = keyDrafts[p.id] ?? '';
-                  return (
-                    <div
-                      key={p.id}
-                      style={{
-                        padding: '8px 10px',
-                        border: '1px solid var(--hairline)',
-                        borderRadius: 4,
-                        background: p.ready_in_team ? 'var(--bg-surface)' : 'transparent',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 6,
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ color: 'var(--ink-muted)', fontSize: 10.5 }}>#{idx + 1}</span>
-                          <strong style={{ fontSize: 12 }}>{p.name}</strong>
-                          {p.is_bonus && (
-                            <span className="oc-kbd" style={{ color: 'var(--sig-green)' }}>+2026 discovered</span>
-                          )}
-                          <span className="oc-kbd">{p.site}</span>
-                          <span style={{ fontSize: 10.5, color: 'var(--ink-muted)' }}>model: {p.model}</span>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span
-                            style={{
-                              fontSize: 10.5,
-                              fontWeight: 700,
-                              color: p.ready_in_team ? 'var(--sig-green)' : 'var(--ink-muted)',
-                            }}
-                          >
-                            {p.ready_in_team ? '[● in swarm]' : p.group === 'paid' ? '[off]' : '[needs free key]'}
-                          </span>
-                          <button
-                            className="oc-btn oc-btn-sm"
-                            disabled={savingId === p.id}
-                            onClick={() => updateProvider({ id: p.id, enabled: !p.enabled })}
-                          >
-                            {p.enabled ? '[disable]' : '[enable]'}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div style={{ fontSize: 11, color: 'var(--ink-secondary)' }}>
-                        {p.limit_notes} &middot; <span style={{ color: 'var(--ink-muted)' }}>{p.base_url}</span>
-                      </div>
-
-                      {(needsKey || p.id === 'llm7') && (
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <input
-                            type="password"
-                            className="text-input"
-                            style={{ flex: 1, padding: '4px 8px', fontSize: 11 }}
-                            placeholder={
-                              p.has_key
-                                ? `saved key (${p.key_preview}) — paste new key to replace`
-                                : p.id === 'llm7'
-                                ? 'optional free token from token.llm7.io (raises to 120 RPM)...'
-                                : `paste ${p.name} API key from ${p.site}...`
-                            }
-                            value={draft}
-                            onChange={(e) => setKeyDrafts((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                          />
-                          <button
-                            className="oc-btn oc-btn-primary oc-btn-sm"
-                            disabled={!draft.trim() || savingId === p.id}
-                            onClick={async () => {
-                              await updateProvider({ id: p.id, api_key: draft.trim(), enabled: true });
-                              setKeyDrafts((prev) => ({ ...prev, [p.id]: '' }));
-                            }}
-                          >
-                            [save key]
-                          </button>
-                          {p.has_key && (
-                            <button
-                              className="oc-btn oc-btn-sm"
-                              onClick={() => updateProvider({ id: p.id, api_key: '__CLEAR__' })}
-                            >
-                              [clear]
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          ) : (
-            /* Tab 5: Bare-Metal Hardware & 3D Engines */
-            <>
-              <div
-                style={{
-                  padding: 10,
-                  border: '1px solid var(--hairline-strong)',
-                  borderRadius: 4,
-                  background: 'var(--bg-surface)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--sig-green)', fontWeight: 700, fontSize: 11.5 }}>
-                    [+] {profile.tier_badge || 'Tier 1 · C++20 Zero-GPU Mode'}
-                  </span>
-                  <span className="oc-kbd">grid: {profile.sdf_grid_resolution || 104}³</span>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--ink-secondary)', marginTop: 4 }}>
-                  {profile.summary}
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                <div style={{ padding: 8, border: '1px solid var(--hairline)', borderRadius: 4 }}>
-                  <div style={{ fontSize: 10, color: 'var(--ink-muted)' }}>CPU</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, marginTop: 2 }}>{cpu.brand || 'x86_64'}</div>
-                  <div style={{ fontSize: 10.5, color: 'var(--ink-secondary)' }}>{cpu.logical_cores || 2} threads</div>
-                </div>
-                <div style={{ padding: 8, border: '1px solid var(--hairline)', borderRadius: 4 }}>
-                  <div style={{ fontSize: 10, color: 'var(--ink-muted)' }}>SYSTEM RAM</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, marginTop: 2 }}>{mem.total_gb || 0} GB</div>
-                  <div style={{ fontSize: 10.5, color: 'var(--ink-secondary)' }}>{mem.available_gb || 0} GB free</div>
-                </div>
-                <div style={{ padding: 8, border: '1px solid var(--hairline)', borderRadius: 4 }}>
-                  <div style={{ fontSize: 10, color: 'var(--ink-muted)' }}>GPU ACCELERATOR</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, marginTop: 2, color: gpus.length ? 'var(--sig-green)' : 'var(--sig-amber, #f59e0b)' }}>
-                    {gpus.length ? gpus[0].name : '0 GB VRAM (CPU OpenMP)'}
+          {/* Right Content Pane */}
+          <div className="oc-settings-content">
+            {/* 1. ADD & CONNECT PROVIDERS */}
+            {section === 'connect' && (
+              <>
+                {/* Active Routing Mode */}
+                <div className="oc-card">
+                  <div className="field-label">
+                    <span>Active AI Router</span>
+                    <span style={{ textTransform: 'none', fontWeight: 400, color: 'var(--ink-muted)' }}>
+                      Controls how Falcon routes 3D & game prompts
+                    </span>
                   </div>
-                  <div style={{ fontSize: 10.5, color: 'var(--ink-secondary)' }}>Compiled C++20 (-O3 OpenMP SIMD)</div>
-                </div>
-              </div>
-
-              <div>
-                <div className="field-label" style={{ marginBottom: 6 }}>probed localhost endpoints</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, fontSize: 11 }}>
-                  <div style={{ padding: '5px 8px', border: '1px solid var(--hairline)', borderRadius: 4, display: 'flex', justifyContent: 'space-between' }}>
-                    <span>ollama :11434</span>{serviceStatus(services.ollama)}
-                  </div>
-                  <div style={{ padding: '5px 8px', border: '1px solid var(--hairline)', borderRadius: 4, display: 'flex', justifyContent: 'space-between' }}>
-                    <span>lm-studio :1234</span>{serviceStatus(services.lm_studio)}
-                  </div>
-                  <div style={{ padding: '5px 8px', border: '1px solid var(--hairline)', borderRadius: 4, display: 'flex', justifyContent: 'space-between' }}>
-                    <span>llama.cpp :8080</span>{serviceStatus(services.llamacpp)}
-                  </div>
-                  <div style={{ padding: '5px 8px', border: '1px solid var(--hairline)', borderRadius: 4, display: 'flex', justifyContent: 'space-between' }}>
-                    <span>vllm :8001</span>{serviceStatus(services.vllm)}
-                  </div>
-                  <div style={{ padding: '5px 8px', border: '1px solid var(--hairline)', borderRadius: 4, display: 'flex', justifyContent: 'space-between' }}>
-                    <span>comfyui :8188</span>{serviceStatus(services.comfyui)}
-                  </div>
-                  <div style={{ padding: '5px 8px', border: '1px solid var(--hairline)', borderRadius: 4, display: 'flex', justifyContent: 'space-between' }}>
-                    <span>c++20 symbolic</span><span style={{ color: 'var(--sig-green)', fontWeight: 600 }}>[on]</span>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ padding: 10, border: '1px solid var(--hairline)', borderRadius: 4, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div className="field-label">custom primary router override</div>
-                <div className="row-2">
-                  <div>
-                    <div className="field-label" style={{ marginBottom: 4 }}>provider mode</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
                     <select
                       className="select-input"
                       value={cfg.provider}
-                      onChange={(e) => setCfg({ ...cfg, provider: e.target.value })}
+                      onChange={(e) => {
+                        const next = { ...cfg, provider: e.target.value };
+                        setCfg(next);
+                        onSaveRouter?.(next);
+                        showToast('Updated active router');
+                      }}
                     >
-                      <option value="auto">auto (active swarm pool &rarr; c++20 symbolic)</option>
-                      <option value="ollama">ollama local (:11434)</option>
-                      <option value="openai_compat">openai-compatible / free-key endpoint</option>
-                      <option value="builtin_symbolic">c++20 symbolic architect (offline 0ms)</option>
+                      <option value="auto">Auto — Connected Providers + Local Ollama + C++20 Engine</option>
+                      <option value="openai_compat">Custom / OpenAI-Compatible Endpoint</option>
+                      <option value="ollama">Local Ollama Only ({cfg.ollama_model})</option>
+                      <option value="builtin_symbolic">Offline C++20 Parametric Engine Only (0 Network)</option>
                     </select>
+                    <button
+                      className="oc-btn"
+                      onClick={() => {
+                        onSaveRouter?.(cfg);
+                        showToast('Router settings saved');
+                      }}
+                    >
+                      Save Router
+                    </button>
                   </div>
-                  <div>
-                    <div className="field-label" style={{ marginBottom: 4 }}>openai / provider base url</div>
+                </div>
+
+                {/* Add Custom OpenAI-Compatible Provider */}
+                <form className="oc-card" onSubmit={handleAddCustomProvider}>
+                  <div className="field-label">
+                    <span>Add Custom Provider (OpenAI-Compatible)</span>
+                    <span style={{ textTransform: 'none', fontWeight: 400, color: 'var(--ink-muted)' }}>
+                      Works with OpenRouter, LiteLLM, vLLM, LM Studio, DeepInfra, or any /v1 endpoint
+                    </span>
+                  </div>
+                  <div className="row-2">
                     <input
                       className="text-input"
-                      value={cfg.openai_base_url}
-                      onChange={(e) => setCfg({ ...cfg, openai_base_url: e.target.value })}
+                      placeholder="Provider Name (e.g. My LiteLLM / OpenRouter)"
+                      value={customForm.name}
+                      onChange={(e) => setCustomForm({ ...customForm, name: e.target.value })}
+                    />
+                    <input
+                      className="text-input"
+                      style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5 }}
+                      placeholder="Base URL (e.g. https://openrouter.ai/api/v1)"
+                      value={customForm.base_url}
+                      onChange={(e) => setCustomForm({ ...customForm, base_url: e.target.value })}
                     />
                   </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button className="oc-btn oc-btn-primary" onClick={handleSaveRouter}>
-                    [save router config]
-                  </button>
-                </div>
-              </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr auto', gap: 8 }}>
+                    <input
+                      type="password"
+                      className="text-input"
+                      placeholder="API Key (optional for local servers)"
+                      value={customForm.api_key}
+                      onChange={(e) => setCustomForm({ ...customForm, api_key: e.target.value })}
+                    />
+                    <input
+                      className="text-input"
+                      style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5 }}
+                      placeholder="Model ID (e.g. gpt-4o-mini / qwen2.5)"
+                      value={customForm.model}
+                      onChange={(e) => setCustomForm({ ...customForm, model: e.target.value })}
+                    />
+                    <button type="submit" className="oc-btn oc-btn-primary">
+                      + Add Provider
+                    </button>
+                  </div>
+                </form>
 
-              <div>
-                <div className="field-label" style={{ marginBottom: 6 }}>open-weight 3d engines ({models.length})</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {models.map((m) => (
-                    <div key={m.id} style={{ padding: 8, border: '1px solid var(--hairline)', borderRadius: 4 }}>
-                      <strong style={{ fontSize: 11.5 }}>{m.name}</strong>{' '}
-                      <span style={{ fontSize: 10.5, color: 'var(--ink-muted)' }}>({m.license} &middot; {m.min_vram_gb}GB VRAM)</span>
-                      <div style={{ fontSize: 10.5, color: 'var(--ink-secondary)', marginTop: 2 }}>{m.notes}</div>
+                {/* User-Added Custom Providers */}
+                {customProviders.length > 0 && (
+                  <div className="field-group">
+                    <div className="field-label">
+                      <span>Your Custom Providers ({customProviders.length})</span>
                     </div>
-                  ))}
+                    {customProviders.map(renderProviderRow)}
+                  </div>
+                )}
+
+                {/* Popular Quick-Connect Cloud Providers */}
+                <div className="field-group">
+                  <div className="field-label">
+                    <span>Quick Connect Popular Providers</span>
+                    <button
+                      className="oc-icon-btn"
+                      style={{ fontSize: 11, textTransform: 'none' }}
+                      onClick={() => setSection('free')}
+                    >
+                      Browse all 68 free providers →
+                    </button>
+                  </div>
+                  {popularProviders.map(renderProviderRow)}
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
+
+            {/* 2. FREE PROVIDERS CATALOG */}
+            {section === 'free' && (
+              <>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input
+                    className="text-input"
+                    style={{ flex: 1, minWidth: 200 }}
+                    placeholder="Search 57 cloud free providers (Groq, Gemini, GitHub, Qwen, Mistral...)"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                  <div className="oc-view-pills">
+                    <button
+                      className={`oc-view-pill ${freeFilter === 'all' ? 'active' : ''}`}
+                      onClick={() => setFreeFilter('all')}
+                    >
+                      All
+                    </button>
+                    <button
+                      className={`oc-view-pill ${freeFilter === 'no_key' ? 'active' : ''}`}
+                      onClick={() => setFreeFilter('no_key')}
+                    >
+                      No Key ({counts.no_key ?? 5})
+                    </button>
+                    <button
+                      className={`oc-view-pill ${freeFilter === 'free_key' ? 'active' : ''}`}
+                      onClick={() => setFreeFilter('free_key')}
+                    >
+                      Free Key ({counts.free_key ?? 52})
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {filteredFree.map(renderProviderRow)}
+                </div>
+              </>
+            )}
+
+            {/* 3. LOCAL AI MODELS (OLLAMA / LM STUDIO / LLAMA.CPP) */}
+            {section === 'local' && (
+              <>
+                <div className="oc-card">
+                  <div className="field-label">
+                    <span>Local Ollama & OpenAI-Compatible Server</span>
+                    <button className="oc-btn oc-btn-sm" onClick={onRescan}>
+                      Scan Local Ports
+                    </button>
+                  </div>
+
+                  <div className="row-2">
+                    <div>
+                      <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginBottom: 4 }}>Ollama URL</div>
+                      <input
+                        className="text-input"
+                        style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5 }}
+                        value={cfg.ollama_url}
+                        onChange={(e) => setCfg({ ...cfg, ollama_url: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginBottom: 4 }}>Ollama Model</div>
+                      <input
+                        className="text-input"
+                        style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5 }}
+                        value={cfg.ollama_model}
+                        onChange={(e) => setCfg({ ...cfg, ollama_model: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="row-2">
+                    <div>
+                      <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginBottom: 4 }}>
+                        LM Studio / llama.cpp / vLLM URL
+                      </div>
+                      <input
+                        className="text-input"
+                        style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5 }}
+                        value={cfg.openai_base_url}
+                        onChange={(e) => setCfg({ ...cfg, openai_base_url: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginBottom: 4 }}>Local Model ID</div>
+                      <input
+                        className="text-input"
+                        style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5 }}
+                        value={cfg.openai_model}
+                        onChange={(e) => setCfg({ ...cfg, openai_model: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      className="oc-btn oc-btn-primary"
+                      onClick={() => {
+                        onSaveRouter?.(cfg);
+                        showToast('Saved local server settings');
+                      }}
+                    >
+                      Save Local Endpoints
+                    </button>
+                  </div>
+                </div>
+
+                {/* Live Port Status */}
+                {localRouters.length > 0 && (
+                  <div className="field-group">
+                    <div className="field-label">
+                      <span>Detected Local Daemons</span>
+                    </div>
+                    <div className="stat-grid-2">
+                      {localRouters.map((r) => (
+                        <div key={r.name} className="stat-box" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: 12 }}>{r.name}</div>
+                            <div style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', color: 'var(--ink-muted)' }}>
+                              {r.endpoint}
+                            </div>
+                          </div>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontFamily: 'var(--font-mono)',
+                              color: r.online ? 'var(--sig-green)' : 'var(--ink-muted)',
+                            }}
+                          >
+                            {r.online ? 'Online' : 'Offline'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="field-group">
+                  <div className="field-label">
+                    <span>All Supported Local Runtimes ({localCatalog.length})</span>
+                  </div>
+                  {localCatalog.map(renderProviderRow)}
+                </div>
+              </>
+            )}
+
+            {/* 4. PAID PROVIDERS (OPT-IN) */}
+            {section === 'paid' && (
+              <>
+                <div style={{ fontSize: 12, color: 'var(--ink-secondary)' }}>
+                  Paid providers are disabled by default. Paste an API key below to opt in a specific provider.
+                </div>
+                <input
+                  className="text-input"
+                  placeholder="Search paid providers (OpenAI, Anthropic, xAI Grok, Together, Fireworks...)"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {paidProviders.map(renderProviderRow)}
+                </div>
+              </>
+            )}
+
+            {/* 5. HARDWARE & STUDIO SETTINGS */}
+            {section === 'hardware' && (
+              <>
+                <div className="stat-grid-2">
+                  <div className="stat-box">
+                    <div className="k">CPU</div>
+                    <div className="v" style={{ fontSize: 12 }}>
+                      {hw.cpu?.brand || 'x86_64'} ({hw.cpu?.logical_cores || 4} threads)
+                    </div>
+                  </div>
+                  <div className="stat-box">
+                    <div className="k">Memory</div>
+                    <div className="v" style={{ fontSize: 12 }}>
+                      {hw.ram?.total_gb || 0} GB ({hw.ram?.available_gb || 0} GB free)
+                    </div>
+                  </div>
+                  <div className="stat-box">
+                    <div className="k">Compute Tier</div>
+                    <div className="v" style={{ fontSize: 12, color: 'var(--sig-green)' }}>
+                      {(hw.tier || 'cpu_universal').toUpperCase()}
+                    </div>
+                  </div>
+                  <div className="stat-box">
+                    <div className="k">GPU / Fallback</div>
+                    <div className="v" style={{ fontSize: 12 }}>
+                      {hw.gpu?.has_dedicated_gpu ? hw.gpu.primary_gpu : 'Zero-GPU C++20 OpenMP'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="oc-card">
+                  <div className="field-label">
+                    <span>Studio Preferences</span>
+                  </div>
+                  <div className="row-2">
+                    <div>
+                      <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginBottom: 4 }}>
+                        Sculpting Voxel Resolution ({gridRes}³)
+                      </div>
+                      <input
+                        type="range"
+                        min={48}
+                        max={128}
+                        step={8}
+                        value={gridRes}
+                        style={{ width: '100%' }}
+                        onChange={(e) => setGridRes?.(Number(e.target.value))}
+                      />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginBottom: 4 }}>Appearance</div>
+                      <button className="oc-btn" style={{ width: '100%' }} onClick={onToggleTheme}>
+                        Theme: {theme === 'dark' ? 'OpenCode Dark' : 'OpenCode Light'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {(hw.recommended_3d_engines || []).length > 0 && (
+                  <div className="field-group">
+                    <div className="field-label">
+                      <span>Compatible Local 3D Engines</span>
+                    </div>
+                    {(hw.recommended_3d_engines || []).map((eng) => (
+                      <div key={eng.id} className="oc-card" style={{ padding: '9px 12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 600, fontSize: 12.5 }}>{eng.name}</span>
+                          <span className="oc-kbd">{eng.license}</span>
+                        </div>
+                        <div style={{ fontSize: 11.5, color: 'var(--ink-muted)' }}>{eng.notes}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

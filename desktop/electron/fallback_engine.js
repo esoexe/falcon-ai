@@ -280,22 +280,58 @@ function startFallbackServer({ port, webDir, assetsDir, starterDir }) {
       }
       if (req.method === 'POST') {
         const body = await readJsonBody(req);
-        data.providers = (data.providers || []).map((p) => {
-          if (p.id !== body.id) return p;
-          const next = { ...p };
-          if (typeof body.enabled === 'boolean') next.enabled = body.enabled;
-          if (body.api_key === '__CLEAR__') {
-            next.has_key = false;
-            next.key_preview = '';
-            next.enabled = false;
-          } else if (body.api_key) {
-            next.has_key = true;
-            next.key_preview = body.api_key.slice(0, 4) + '...';
-            next.enabled = true;
-          }
-          next.ready_in_team = (next.group === 'no_key' || next.group === 'local') ? next.enabled : (next.enabled && next.has_key);
-          return next;
-        });
+        if (body.action === 'add_custom') {
+          const cid = `custom_${Date.now()}`;
+          const hasKey = Boolean(body.api_key);
+          data.providers = [
+            {
+              id: cid,
+              name: body.name || 'Custom OpenAI Endpoint',
+              group: 'custom',
+              limit_notes: 'Custom OpenAI-compatible provider',
+              site: 'custom',
+              base_url: body.base_url || 'http://127.0.0.1:1234/v1',
+              model: body.model || 'default',
+              free_models_est: 1,
+              is_bonus: false,
+              is_custom: true,
+              enabled: true,
+              has_key: hasKey,
+              key_preview: hasKey ? body.api_key.slice(0, 4) + '...' : '',
+              ready_in_team: true,
+            },
+            ...(data.providers || []),
+          ];
+        } else if (body.action === 'delete_custom') {
+          data.providers = (data.providers || []).filter((p) => p.id !== body.id);
+        } else {
+          data.providers = (data.providers || []).map((p) => {
+            if (p.id !== body.id) return p;
+            const next = { ...p };
+            if (typeof body.enabled === 'boolean') next.enabled = body.enabled;
+            if (body.model) next.model = body.model;
+            if (body.base_url) next.base_url = body.base_url;
+            if (body.api_key === '__CLEAR__') {
+              next.has_key = false;
+              next.key_preview = '';
+              next.enabled = false;
+            } else if (body.api_key) {
+              next.has_key = true;
+              next.key_preview = body.api_key.slice(0, 4) + '...';
+              next.enabled = true;
+            }
+            next.ready_in_team =
+              next.group === 'no_key' || next.group === 'local' || next.group === 'custom'
+                ? next.enabled
+                : next.enabled && next.has_key;
+            return next;
+          });
+        }
+        data.counts = {
+          ...(data.counts || {}),
+          custom: (data.providers || []).filter((p) => p.group === 'custom').length,
+          active_in_swarm: (data.providers || []).filter((p) => p.ready_in_team).length,
+        };
         fs.writeFileSync(pFile, JSON.stringify(data, null, 2));
       }
       return sendJson(data);

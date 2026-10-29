@@ -72,21 +72,21 @@ export default function SwarmPanel({
           className={`oc-btn oc-btn-sm ${stageMode === 'model' ? 'oc-btn-primary' : ''}`}
           onClick={() => setStageMode('model')}
         >
-          [3d asset swarm]
+          3D Asset Swarm
         </button>
         <button
           className={`oc-btn oc-btn-sm ${stageMode === 'game' ? 'oc-btn-primary' : ''}`}
           onClick={() => setStageMode('game')}
         >
-          [▶ 3d game swarm]
+          3D Game Swarm
         </button>
       </div>
 
       {/* Live 6-Agent Subagent Pipeline Trace */}
       <div className="field-group">
         <div className="field-label">
-          <span>6-agent swarm pipeline</span>
-          <span style={{ color: 'var(--sig-green)' }}>[● active]</span>
+          <span>6-Agent Pipeline</span>
+          <span style={{ color: 'var(--sig-green)', textTransform: 'none' }}>Active</span>
         </div>
 
         <div
