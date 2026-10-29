@@ -1,0 +1,18 @@
+[Unit]
+Description=OpenMesh Studio 2.0 — Native C++20 3D Engine & WebGL Studio (Zero Docker)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/user/openmesh-studio
+ExecStart=/home/user/openmesh-studio/bin/openmesh_server --port 8000
+Restart=on-failure
+RestartSec=2
+# Native Linux Kernel Sandboxing (Zero-Overhead Alternative to Docker)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/home/user/openmesh-studio
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,60 @@
+{
+  "name": "falcon-ai-desktop",
+  "productName": "Falcon AI",
+  "version": "2.0.0",
+  "description": "Falcon AI — Open-Source C++20 3D Model Swarm, CAD Slicer & Playable 60-FPS 3D Game Studio",
+  "author": "Falcon AI Open Source",
+  "license": "MIT",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "start:setup": "electron . --setup",
+    "build:win": "electron-builder --win portable --x64",
+    "build:linux": "electron-builder --linux AppImage --x64"
+  },
+  "build": {
+    "appId": "ai.falcon.studio",
+    "productName": "Falcon AI",
+    "compression": "maximum",
+    "directories": {
+      "output": "../releases",
+      "buildResources": "assets"
+    },
+    "files": [
+      "electron/**/*",
+      "installer/**/*",
+      "assets/**/*",
+      "web_bundle/**/*",
+      "starter_assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../bin",
+        "to": "bin",
+        "filter": ["falcon_server*"]
+      }
+    ],
+    "win": {
+      "icon": "assets/icon.png",
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "Falcon-AI-Setup-${version}-x64.exe"
+    },
+    "linux": {
+      "icon": "assets/icon.png",
+      "category": "Graphics",
+      "target": ["AppImage"]
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  }
+}

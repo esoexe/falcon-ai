@@ -1,0 +1,56 @@
+name: Build Falcon AI C++20 & Animated Setup.exe
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-linux-cpp20:
+    name: Linux C++20 Engine & Embedded WebGL VFS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install C++20 native libraries
+        run: sudo apt-get update && sudo apt-get install -y g++ libcurl4-openssl-dev libpng-dev libjpeg-dev zlib1g-dev
+      - name: Build Frontend Bundle
+        working-directory: frontend
+        run: npm ci && npm run build
+      - name: Compile C++20 Binaries (Zero Warnings)
+        run: make -j$(nproc)
+      - name: Smoke Test Watertight 3D Swarm & Game API
+        run: |
+          ./bin/falcon_server --port 8000 &
+          SRV_PID=$!
+          sleep 5
+          curl -fsS http://127.0.0.1:8000/api/hardware > /dev/null
+          curl -fsS http://127.0.0.1:8000/api/providers > /dev/null
+          curl -fsS http://127.0.0.1:8000/api/games > /dev/null
+          kill $SRV_PID
+
+  build-windows-setup-exe:
+    name: Windows x64 Live-Animated Setup.exe
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build Frontend WebGL Bundle
+        working-directory: frontend
+        run: npm ci && npm run build
+      - name: Package Falcon-AI-Setup-2.0.0-x64.exe
+        working-directory: desktop
+        run: |
+          npm ci
+          Copy-Item -Recurse ..\frontend\web_bundle .\web_bundle
+          npm run build:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Falcon-AI-Setup-Windows-x64
+          path: releases/Falcon-AI-Setup-*.exe
